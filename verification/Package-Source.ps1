@@ -3,7 +3,7 @@ $hlRoot=Split-Path $PSScriptRoot -Parent
 $hlVersion=(Get-Content -LiteralPath (Join-Path $hlRoot 'source/package.json') -Raw|ConvertFrom-Json).version
 Set-Location $hlRoot
 $hlFiles=@(& rg --files --hidden source verification installer -g '!source/node_modules/**' -g '!source/src-tauri/target/**' -g '!source/src-tauri/gen/**' -g '!source/dist/**' -g '!verification/current/**' -g '!installer/output/**' -g '!installer/build/**' -g '!installer/work/**')
-$hlFiles+=@('README.md','LICENSE','THIRD_PARTY_NOTICES.md','AGENTS.md','.gitignore','Build-HumbleLibrary.cmd','Start-HumbleLibrary.cmd')
+$hlFiles+=@('README.md','LICENSE','THIRD_PARTY_NOTICES.md','AGENTS.md','.gitignore','.gitattributes','Build-HumbleLibrary.cmd','Start-HumbleLibrary.cmd')
 $hlFiles=@($hlFiles|Sort-Object -Unique)
 if($hlFiles|Where-Object{$_ -match '(?i)(?:^|[\\/])(?:Data|Account|Exports|\.release-secrets|node_modules|target|current|output|build|work)(?:[\\/]|$)|\.dpapi$'}){throw 'Private or generated path entered source archive'}
 $hlArchivePath=Join-Path $hlRoot "Releases/$hlVersion/HumbleLibrary-$hlVersion-Sources.zip"
