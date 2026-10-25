@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-humble-logout"
+description = "Enables the humble_logout command without any pre-configured scope."
+commands.allow = ["humble_logout"]
+
+[[permission]]
+identifier = "deny-humble-logout"
+description = "Denies the humble_logout command without any pre-configured scope."
+commands.deny = ["humble_logout"]

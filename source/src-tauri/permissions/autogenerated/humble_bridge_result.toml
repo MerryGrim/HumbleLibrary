@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-humble-bridge-result"
+description = "Enables the humble_bridge_result command without any pre-configured scope."
+commands.allow = ["humble_bridge_result"]
+
+[[permission]]
+identifier = "deny-humble-bridge-result"
+description = "Denies the humble_bridge_result command without any pre-configured scope."
+commands.deny = ["humble_bridge_result"]

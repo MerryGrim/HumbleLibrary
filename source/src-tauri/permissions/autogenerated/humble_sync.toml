@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-humble-sync"
+description = "Enables the humble_sync command without any pre-configured scope."
+commands.allow = ["humble_sync"]
+
+[[permission]]
+identifier = "deny-humble-sync"
+description = "Denies the humble_sync command without any pre-configured scope."
+commands.deny = ["humble_sync"]

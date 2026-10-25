@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-updates-set"
+description = "Enables the updates_set command without any pre-configured scope."
+commands.allow = ["updates_set"]
+
+[[permission]]
+identifier = "deny-updates-set"
+description = "Denies the updates_set command without any pre-configured scope."
+commands.deny = ["updates_set"]

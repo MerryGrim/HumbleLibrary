@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-humble-cancel"
+description = "Enables the humble_cancel command without any pre-configured scope."
+commands.allow = ["humble_cancel"]
+
+[[permission]]
+identifier = "deny-humble-cancel"
+description = "Denies the humble_cancel command without any pre-configured scope."
+commands.deny = ["humble_cancel"]

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-humble-status"
+description = "Enables the humble_status command without any pre-configured scope."
+commands.allow = ["humble_status"]
+
+[[permission]]
+identifier = "deny-humble-status"
+description = "Denies the humble_status command without any pre-configured scope."
+commands.deny = ["humble_status"]

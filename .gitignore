@@ -1,0 +1,14 @@
+/source/node_modules/
+/source/dist/
+/source/src-tauri/target/
+/source/src-tauri/gen/
+/Data/
+/verification/current/
+/Releases/
+/BUILD-REPORT.json
+/Exports/
+/work/
+/installer/output/
+/installer/build/
+/.release-secrets/
+*.pdb

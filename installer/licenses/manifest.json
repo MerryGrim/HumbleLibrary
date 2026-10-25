@@ -1,0 +1,62 @@
+{
+  "schema": 1,
+  "projectLicenseSha256": "eb1bcd6f63ad624a6e9e65ccd9be1fd637282852ed3185e855969be6f7025b50",
+  "installerComponentLicenseSha256": "ba7e31742ee9f3c4ece4bcc51beeb56ad8d84fd6c89f7b4dc0b57d73a6213c5a",
+  "microsoftStlLicenseSha256": "1fc6b6db121d4555d8f661937d7f6013693cd8fd67495d5e5d98c1d18fb83eda",
+  "agreements": [
+    {
+      "language": "ru",
+      "file": "HumbleLibrary-ru.txt",
+      "bytes": 15272,
+      "sha256": "3faaae06e270d2fc7c1359aeb284b81f406fa6269223f771810431347677f68c"
+    },
+    {
+      "language": "en",
+      "file": "HumbleLibrary-en.txt",
+      "bytes": 15110,
+      "sha256": "3b425f61703dabc6de378bfdde8a3392f62d736fc152730151f28bbbe59fda35"
+    },
+    {
+      "language": "de",
+      "file": "HumbleLibrary-de.txt",
+      "bytes": 15155,
+      "sha256": "b000c07a77c5fd69b9be8c5009c3d042e930370bbefef36d6752bdf08a5f93b0"
+    },
+    {
+      "language": "it",
+      "file": "HumbleLibrary-it.txt",
+      "bytes": 15148,
+      "sha256": "c7338302bb02f95ddb774b3e98e82dd525517d73450bcffad6463c2748e6a11d"
+    },
+    {
+      "language": "es",
+      "file": "HumbleLibrary-es.txt",
+      "bytes": 15165,
+      "sha256": "f9eecbfb5b538badda8a2510a91f683ff22515628982bde9618ff841f04e3449"
+    },
+    {
+      "language": "fr",
+      "file": "HumbleLibrary-fr.txt",
+      "bytes": 15168,
+      "sha256": "0cb935978625b020c805d9cb39750db34922f8e5a2cf05a7f9dc217d64207e73"
+    },
+    {
+      "language": "zh",
+      "file": "HumbleLibrary-zh.txt",
+      "bytes": 15093,
+      "sha256": "a1f05f2bb407da20d8de7081b8c3aa3cd8581956e75b7c724466e5697558848a"
+    },
+    {
+      "language": "ja",
+      "file": "HumbleLibrary-ja.txt",
+      "bytes": 15232,
+      "sha256": "f81516f0d9cdc8c151454b71c18cacf2cfc7a2d4045baeebf37df4760a8bc9aa"
+    },
+    {
+      "language": "ko",
+      "file": "HumbleLibrary-ko.txt",
+      "bytes": 15179,
+      "sha256": "3e8f29dab75574760b1dceeb989f12a578eb80a4dcf730481b3b0008c3834512"
+    }
+  ]
+}

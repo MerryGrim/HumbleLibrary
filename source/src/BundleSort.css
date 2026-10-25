@@ -1,0 +1,2 @@
+.bundle-sort{display:flex;align-items:center;gap:9px;flex-shrink:0;min-width:0;color:var(--muted);font-size:11px}.bundle-sort>span{white-space:nowrap}.bundle-sort select{width:260px;max-width:32vw;font-size:11px;color:var(--text)}@media(max-width:1000px){.bundle-sort{gap:7px}.bundle-sort select{width:245px;max-width:35vw}}@media(max-width:740px){.bundle-sort{margin-left:auto}.bundle-sort select{max-width:48vw;width:245px}.bundle-sort>span{display:none}}
+
