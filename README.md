@@ -10,9 +10,9 @@ An unofficial Windows desktop client for your Humble Bundle library. Browse purc
 
 ## Get started
 
-1. Download **HumbleLibrary-0.2.3-Setup-Windows-x64.exe** from the [latest release](https://github.com/MerryGrim/HumbleLibrary/releases/latest), or extract the portable ZIP to its own folder.
+1. Download **HumbleLibrary-0.2.4-Setup-Windows-x64.exe** from the [latest release](https://github.com/MerryGrim/HumbleLibrary/releases/latest), or extract the portable ZIP to its own folder.
 2. Run the installer or `HumbleLibrary.exe`. The MiraUI installer works for the current Windows user without administrator privileges. A desktop shortcut is optional.
-3. Choose **Sign in to Humble**. A separate window opens the official Humble website. Use its Sign in action so Humble creates its own authentication flow and return destination. Complete your usual sign-in, including two-factor authentication or CAPTCHA if requested.
+3. Choose **Sign in to Humble**. A separate window opens the official Humble sign-in form directly at `auth.humblebundle.com/login`. Humble creates a fresh authentication flow automatically. Complete your usual sign-in, including two-factor authentication or CAPTCHA if requested.
 4. After sign-in is confirmed, the window closes and your library refreshes. Closing it early cancels the attempt without reopening the window.
 
 Requires **Windows 10 version 2004 (build 19041) or later, x64, and Microsoft Edge WebView2 Runtime**. Development tools are not needed to use the app.

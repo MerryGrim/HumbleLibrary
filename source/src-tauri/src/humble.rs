@@ -7,9 +7,9 @@ use tokio::sync::oneshot;
 
 const LABEL: &str = "humble-account";
 const ORIGIN: &str = "https://www.humblebundle.com";
-// Let the merchant website initiate its identity flow and return/session exchange.
-// Do not reuse an identity-provider flow or bypass the website's login entry.
-const LOGIN_URL: &str = "https://www.humblebundle.com/";
+// Humble creates a fresh flow when the official sign-in form is opened.
+// Never retain a flow identifier from an earlier sign-in attempt.
+const LOGIN_URL: &str = "https://auth.humblebundle.com/login";
 const BROWSER_ARGS: &str = "--disable-gpu --disable-gpu-compositing";
 const MAX_PAYLOAD: usize = 64 * 1024 * 1024;
 const AUTH_WATCH_INTERVAL: Duration = Duration::from_secs(5);
