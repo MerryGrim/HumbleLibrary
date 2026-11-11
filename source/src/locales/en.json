@@ -335,5 +335,21 @@
   "Завершите вход в отдельном окне. Библиотека обновится автоматически.": "Complete sign-in in the separate window. Your library will refresh automatically.",
   "Сессия не проверена": "Session not verified",
   "Проверяем сессию…": "Checking session…",
-  "Установка обновлений доступна в установленной или portable-версии.": "Update installation is available in installed or portable editions."
+  "Установка обновлений доступна в установленной или portable-версии.": "Update installation is available in installed or portable editions.",
+  "Данные Humble": "Humble data",
+  "Очистить кэш сайта": "Clear website cache",
+  "Удалит временные файлы сайта. Вход, библиотека и ключи сохранятся.": "Removes temporary website files. Your sign-in, library and keys are preserved.",
+  "Сбросить вход Humble": "Reset Humble sign-in",
+  "Удалит данные входа на сайте. Библиотека и сохранённые ключи останутся в приложении.": "Removes website sign-in data. Your library and saved keys remain in the app.",
+  "Сбросить вход Humble?": "Reset Humble sign-in?",
+  "Потребуется войти в Humble заново. Бандлы, ключи и настройки приложения сохранятся.": "You will need to sign in to Humble again. Bundles, keys and app settings are preserved.",
+  "Очищаем кэш…": "Clearing cache…",
+  "Сбрасываем вход…": "Resetting sign-in…",
+  "Кэш сайта очищен.": "Website cache cleared.",
+  "Вход Humble сброшен. Войдите заново.": "Humble sign-in reset. Sign in again.",
+  "Не удалось очистить кэш сайта.": "Could not clear the website cache.",
+  "Не удалось сбросить вход Humble.": "Could not reset Humble sign-in.",
+  "Завершите текущую операцию или закройте окно входа.": "Finish the current operation or close the sign-in window.",
+  "Не удалось очистить кэш браузера. Перезапустите приложение и повторите.": "Could not clear the browser cache. Restart the app and try again.",
+  "Не удалось сбросить вход. Перезапустите приложение и повторите.": "Could not reset sign-in. Restart the app and try again."
 }

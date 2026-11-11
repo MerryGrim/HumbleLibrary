@@ -335,5 +335,21 @@
   "Завершите вход в отдельном окне. Библиотека обновится автоматически.": "Completa l’accesso nella finestra separata. La libreria si aggiornerà automaticamente.",
   "Сессия не проверена": "Sessione non verificata",
   "Проверяем сессию…": "Verifica della sessione…",
-  "Установка обновлений доступна в установленной или portable-версии.": "L’installazione degli aggiornamenti è disponibile nelle versioni installata e portatile."
+  "Установка обновлений доступна в установленной или portable-версии.": "L’installazione degli aggiornamenti è disponibile nelle versioni installata e portatile.",
+  "Данные Humble": "Dati di Humble",
+  "Очистить кэш сайта": "Svuota la cache del sito",
+  "Удалит временные файлы сайта. Вход, библиотека и ключи сохранятся.": "Elimina i file temporanei del sito. Accesso, libreria e chiavi vengono conservati.",
+  "Сбросить вход Humble": "Reimposta l’accesso a Humble",
+  "Удалит данные входа на сайте. Библиотека и сохранённые ключи останутся в приложении.": "Elimina i dati di accesso al sito. La libreria e le chiavi salvate rimangono nell’app.",
+  "Сбросить вход Humble?": "Reimpostare l’accesso a Humble?",
+  "Потребуется войти в Humble заново. Бандлы, ключи и настройки приложения сохранятся.": "Dovrai accedere di nuovo a Humble. Bundle, chiavi e impostazioni dell’app vengono conservati.",
+  "Очищаем кэш…": "Svuotamento della cache…",
+  "Сбрасываем вход…": "Reimpostazione dell’accesso…",
+  "Кэш сайта очищен.": "Cache del sito svuotata.",
+  "Вход Humble сброшен. Войдите заново.": "Accesso a Humble reimpostato. Accedi di nuovo.",
+  "Не удалось очистить кэш сайта.": "Impossibile svuotare la cache del sito.",
+  "Не удалось сбросить вход Humble.": "Impossibile reimpostare l’accesso a Humble.",
+  "Завершите текущую операцию или закройте окно входа.": "Completa l’operazione in corso o chiudi la finestra di accesso.",
+  "Не удалось очистить кэш браузера. Перезапустите приложение и повторите.": "Impossibile svuotare la cache del browser. Riavvia l’app e riprova.",
+  "Не удалось сбросить вход. Перезапустите приложение и повторите.": "Impossibile reimpostare l’accesso. Riavvia l’app e riprova."
 }

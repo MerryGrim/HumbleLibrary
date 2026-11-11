@@ -2,6 +2,7 @@ mod humble;
 mod storage;
 mod locale;
 mod app_updates;
+mod browser_data;
 use tauri::{Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder, WindowEvent};
 
 fn main_only(window: &WebviewWindow) -> Result<(), String> {
@@ -57,6 +58,7 @@ pub fn run() {
             humble::humble_login, humble::humble_status, humble::humble_sync,
             humble::humble_reveal, humble::humble_logout, humble::humble_bridge_result,
             humble::humble_cancel, export_keys, copy_text, open_external, locale::set_ui_language,
+            humble::humble_clear_cache, humble::humble_reset_login,
             app_updates::updates_get, app_updates::updates_set, app_updates::updates_check,
             app_updates::updates_download, app_updates::updates_apply, app_updates::updates_ready
         ])

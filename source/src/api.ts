@@ -32,6 +32,7 @@ const fixtures:Bundle[] = [
   ]}
 ];
 let previewConnected = true;
+let previewLibraryRetained = true;
 let previewUpdates:UpdateSettings={enabled:false,repository:'',configured:false,currentVersion:metadata.version,mode:'portable',supported:true};
 const delay = (ms:number) => new Promise(resolve => setTimeout(resolve,ms));
 export const api = {
@@ -51,12 +52,12 @@ export const api = {
   async applyUpdate(version:string):Promise<void>{return invoke('updates_apply',{version});},
   async onUpdateProgress(callback:(value:UpdateProgress)=>void):Promise<()=>void>{if(!isTauri())return ()=>{};return listen<UpdateProgress>('update-progress',event=>callback(event.payload));},
   async status():Promise<LibraryStatus> {
-    if(preview) return {connected:previewConnected,authState:previewConnected?'authenticated':'unauthenticated',lastSync:'2026-10-25T12:00:00Z',bundles:structuredClone(previewConnected?fixtures:[])};
+    if(preview) return {connected:previewConnected,authState:previewConnected?'authenticated':'unauthenticated',lastSync:'2026-10-25T12:00:00Z',bundles:structuredClone(previewConnected || previewLibraryRetained ? fixtures : [])};
     if(!isTauri()) return {connected:false,authState:'unknown',bundles:[]};
     return invoke('humble_status');
   },
   async login():Promise<LoginAttempt> {
-    if(preview){ previewConnected=true; return {attemptId:crypto.randomUUID()}; }
+    if(preview){ previewConnected=true; previewLibraryRetained=true; return {attemptId:crypto.randomUUID()}; }
     return invoke('humble_login');
   },
   async sync():Promise<Bundle[]> {
@@ -75,7 +76,9 @@ export const api = {
     return invoke('humble_reveal',{bundleId,itemId});
   },
   async cancel():Promise<void> { if(!preview) await invoke('humble_cancel'); },
-  async logout():Promise<void> { if(preview){ previewConnected=false; return; } return invoke('humble_logout'); },
+  async logout():Promise<void> { if(preview){ previewConnected=false; previewLibraryRetained=false; return; } return invoke('humble_logout'); },
+  async clearCache():Promise<void> { if(preview) return; return invoke('humble_clear_cache'); },
+  async resetLogin():Promise<void> { if(preview){ previewConnected=false; return; } return invoke('humble_reset_login'); },
   async copy(text:string):Promise<void> {
     if(isTauri()) return invoke('copy_text',{text});
     await navigator.clipboard.writeText(text);

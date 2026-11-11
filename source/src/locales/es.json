@@ -335,5 +335,21 @@
   "Завершите вход в отдельном окне. Библиотека обновится автоматически.": "Completa el inicio de sesión en la ventana separada. La biblioteca se actualizará automáticamente.",
   "Сессия не проверена": "Sesión sin verificar",
   "Проверяем сессию…": "Comprobando sesión…",
-  "Установка обновлений доступна в установленной или portable-версии.": "La instalación de actualizaciones está disponible en las versiones instalada y portátil."
+  "Установка обновлений доступна в установленной или portable-версии.": "La instalación de actualizaciones está disponible en las versiones instalada y portátil.",
+  "Данные Humble": "Datos de Humble",
+  "Очистить кэш сайта": "Borrar caché del sitio",
+  "Удалит временные файлы сайта. Вход, библиотека и ключи сохранятся.": "Elimina los archivos temporales del sitio. Se conservan la sesión, la biblioteca y las claves.",
+  "Сбросить вход Humble": "Restablecer sesión de Humble",
+  "Удалит данные входа на сайте. Библиотека и сохранённые ключи останутся в приложении.": "Elimina los datos de inicio de sesión del sitio. La biblioteca y las claves guardadas permanecen en la aplicación.",
+  "Сбросить вход Humble?": "¿Restablecer la sesión de Humble?",
+  "Потребуется войти в Humble заново. Бандлы, ключи и настройки приложения сохранятся.": "Tendrás que volver a iniciar sesión en Humble. Se conservan los paquetes, las claves y los ajustes de la aplicación.",
+  "Очищаем кэш…": "Borrando caché…",
+  "Сбрасываем вход…": "Restableciendo sesión…",
+  "Кэш сайта очищен.": "Caché del sitio borrada.",
+  "Вход Humble сброшен. Войдите заново.": "Sesión de Humble restablecida. Vuelve a iniciar sesión.",
+  "Не удалось очистить кэш сайта.": "No se pudo borrar la caché del sitio.",
+  "Не удалось сбросить вход Humble.": "No se pudo restablecer la sesión de Humble.",
+  "Завершите текущую операцию или закройте окно входа.": "Finaliza la operación actual o cierra la ventana de inicio de sesión.",
+  "Не удалось очистить кэш браузера. Перезапустите приложение и повторите.": "No se pudo borrar la caché del navegador. Reinicia la aplicación e inténtalo de nuevo.",
+  "Не удалось сбросить вход. Перезапустите приложение и повторите.": "No se pudo restablecer la sesión. Reinicia la aplicación e inténtalo de nuevo."
 }

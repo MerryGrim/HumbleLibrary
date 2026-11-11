@@ -7,8 +7,9 @@ use tokio::sync::oneshot;
 
 const LABEL: &str = "humble-account";
 const ORIGIN: &str = "https://www.humblebundle.com";
-// The identity service creates a fresh flow; never retain a flow from a prior login.
-const LOGIN_URL: &str = "https://auth.humblebundle.com/login";
+// Let the merchant website initiate its identity flow and return/session exchange.
+// Do not reuse an identity-provider flow or bypass the website's login entry.
+const LOGIN_URL: &str = "https://www.humblebundle.com/";
 const BROWSER_ARGS: &str = "--disable-gpu --disable-gpu-compositing";
 const MAX_PAYLOAD: usize = 64 * 1024 * 1024;
 const AUTH_WATCH_INTERVAL: Duration = Duration::from_secs(5);
@@ -104,6 +105,11 @@ pub struct HumbleState {
     login: Mutex<LoginLifecycle>,
     window_instance: Mutex<Option<String>>,
     cancelled: AtomicBool,
+    maintenance: AtomicBool,
+    maintenance_ready: AtomicBool,
+    // An interrupted native purge must not overlap a new login/update. This
+    // guard deliberately survives until restart if completion is uncertain.
+    maintenance_update_guard: Mutex<Option<crate::app_updates::Operation>>,
 }
 
 fn error(reason: &str) -> String {
@@ -142,6 +148,9 @@ fn cancel_pending_auth(state: &HumbleState) {
     }
 }
 fn account_navigation(state: &HumbleState, instance: &str, url: &tauri::Url) -> bool {
+    if state.maintenance.load(Ordering::Acquire) {
+        return url.as_str() == "about:blank";
+    }
     if url.scheme() != "https" || url.host_str().is_none() || !url.username().is_empty() || url.password().is_some() { return false; }
     if current_window(state, instance) {
         state.ready.store(false, Ordering::Release);
@@ -225,7 +234,8 @@ fn ensure_window(app: &tauri::AppHandle, visible: bool) -> Result<WebviewWindow,
     let state = app.state::<HumbleState>();
     state.ready.store(false, Ordering::Release);
     *state.window_instance.lock().map_err(|_| error("service"))? = Some(instance.clone());
-    let url = if visible { LOGIN_URL } else { "https://www.humblebundle.com/home/keys" };
+    let url = if state.maintenance.load(Ordering::Acquire) { "about:blank" }
+        else if visible { LOGIN_URL } else { "https://www.humblebundle.com/home/keys" };
     let window = WebviewWindowBuilder::new(app, LABEL, WebviewUrl::External(url.parse().map_err(|_| error("window"))?))
         .title(crate::locale::text("login"))
         .inner_size(1000.0, 760.0).min_inner_size(700.0, 540.0)
@@ -241,6 +251,13 @@ fn ensure_window(app: &tauri::AppHandle, visible: bool) -> Result<WebviewWindow,
         })
         .on_page_load(move |window, payload| {
             let state = window.app_handle().state::<HumbleState>();
+            if state.maintenance.load(Ordering::Acquire) {
+                if payload.event() == tauri::webview::PageLoadEvent::Finished
+                    && payload.url().as_str() == "about:blank" && current_window(&state, &loaded_instance) {
+                    state.maintenance_ready.store(true, Ordering::Release);
+                }
+                return;
+            }
             if payload.event() == tauri::webview::PageLoadEvent::Finished && official(payload.url()) && current_window(&state, &loaded_instance) {
                 state.ready.store(true, Ordering::Release);
                 schedule_auth_probe(window.app_handle().clone(), window.clone(), loaded_instance.clone(), None);
@@ -275,7 +292,10 @@ fn watch_auth_attempt(app: tauri::AppHandle, window: WebviewWindow, instance: St
             if tokio::time::Instant::now() >= deadline
                 || !current_window(&state, &instance)
                 || !state.login.lock().ok().is_some_and(|login| login.current.as_deref() == Some(attempt_id.as_str())) { return; }
-            if state.ready.load(Ordering::Acquire) && window.url().ok().is_some_and(|url| official(&url)) {
+            // A same-document redirect can outlive the last page-load callback.
+            // The current origin and a successful bridge reply are the proof;
+            // a stale readiness hint must not stop login recovery forever.
+            if window.url().ok().is_some_and(|url| official(&url)) {
                 schedule_auth_probe(app.clone(), window.clone(), instance.clone(), Some(&attempt_id));
             }
         }
@@ -333,6 +353,7 @@ fn schedule_auth_probe(app: tauri::AppHandle, window: WebviewWindow, instance: S
             if !current_window(&state, &instance) { return; }
             let completed = state.login.lock().ok().is_some_and(|mut login| login.complete(&probe));
             if !completed { return; }
+            state.ready.store(true, Ordering::Release);
             set_auth_state(&main_app, &state, AuthState::Authenticated);
             // Hiding preserves the same browser/bridge and never cancels a
             // sync or reveal that starts after the completion event.
@@ -400,6 +421,7 @@ pub fn humble_status(window: WebviewWindow, state: tauri::State<'_, HumbleState>
 #[tauri::command]
 pub async fn humble_login(window: WebviewWindow, app: tauri::AppHandle, state: tauri::State<'_, HumbleState>) -> Result<LoginAttempt, String> {
     main_only(&window)?;
+    if state.maintenance.load(Ordering::Acquire) { return Err(error("busy")); }
     let _operation = crate::app_updates::operation()?;
     let _guard = state.operation.try_lock().map_err(|_| error("busy"))?;
     let attempt = state.login.lock().map_err(|_| error("service"))?.begin();
@@ -419,6 +441,7 @@ pub async fn humble_login(window: WebviewWindow, app: tauri::AppHandle, state: t
 #[tauri::command]
 pub async fn humble_sync(window: WebviewWindow, app: tauri::AppHandle, state: tauri::State<'_, HumbleState>) -> Result<Status, String> {
     main_only(&window)?;
+    if state.maintenance.load(Ordering::Acquire) { return Err(error("busy")); }
     let _operation = crate::app_updates::operation()?;
     let _guard = state.operation.try_lock().map_err(|_| error("busy"))?;
     state.cancelled.store(false, Ordering::Release);
@@ -443,6 +466,7 @@ pub async fn humble_sync(window: WebviewWindow, app: tauri::AppHandle, state: ta
 #[tauri::command]
 pub async fn humble_reveal(window: WebviewWindow, app: tauri::AppHandle, state: tauri::State<'_, HumbleState>, bundle_id: String, item_id: String) -> Result<KeyItem, String> {
     main_only(&window)?;
+    if state.maintenance.load(Ordering::Acquire) { return Err(error("busy")); }
     let _operation = crate::app_updates::operation()?;
     let _guard = state.operation.try_lock().map_err(|_| error("busy"))?;
     state.cancelled.store(false, Ordering::Release);
@@ -469,6 +493,7 @@ pub async fn humble_reveal(window: WebviewWindow, app: tauri::AppHandle, state: 
 #[tauri::command]
 pub fn humble_cancel(window: WebviewWindow, app: tauri::AppHandle, state: tauri::State<'_, HumbleState>) -> Result<(), String> {
     main_only(&window)?;
+    if state.maintenance.load(Ordering::Acquire) { return Err(error("busy")); }
     state.cancelled.store(true, Ordering::Release);
     let pending = state.pending.lock().map_err(|_| error("service"))?.take();
     if let Some(pending) = pending {
@@ -481,9 +506,88 @@ pub fn humble_cancel(window: WebviewWindow, app: tauri::AppHandle, state: tauri:
     Ok(())
 }
 
+fn maintenance_available(state: &HumbleState) -> bool {
+    !state.maintenance.load(Ordering::Acquire)
+        && state.login.lock().ok().is_some_and(|login| login.current.is_none())
+        && state.pending.lock().ok().is_some_and(|pending| pending.is_none())
+}
+
+async fn maintain_browser_data(main: &WebviewWindow, app: &tauri::AppHandle, state: &HumbleState, reset: bool) -> Result<(), String> {
+    use crate::browser_data::{self, ClearError, ClearKind};
+    if !maintenance_available(state) { return Err(error("busy")); }
+    let updating = crate::app_updates::operation()?;
+    let _guard = state.operation.try_lock().map_err(|_| error("busy"))?;
+    if !maintenance_available(state)
+        || state.maintenance.compare_exchange(false, true, Ordering::AcqRel, Ordering::Acquire).is_err() { return Err(error("busy")); }
+    state.maintenance_ready.store(false, Ordering::Release);
+    state.ready.store(false, Ordering::Release);
+    let result: Result<(), ClearError> = async {
+        // The blank document stops account scripts from repopulating cookies or
+        // storage while their own profile is cleared. A missing account window
+        // is created blank and hidden: maintenance never contacts Humble.
+        let account = ensure_window(app, false).map_err(|_| ClearError::Unavailable)?;
+        if account.url().ok().is_some_and(|url| url.as_str() == "about:blank") {
+            state.maintenance_ready.store(true, Ordering::Release);
+        } else {
+            account.navigate("about:blank".parse().map_err(|_| ClearError::Unavailable)?).map_err(|_| ClearError::Unavailable)?;
+        }
+        for _ in 0..150 {
+            if state.maintenance_ready.load(Ordering::Acquire) { break; }
+            if app.get_webview_window(LABEL).is_none() { return Err(ClearError::Unavailable); }
+            tokio::time::sleep(Duration::from_millis(100)).await;
+        }
+        if !state.maintenance_ready.load(Ordering::Acquire) { return Err(ClearError::Unavailable); }
+        if !reset { browser_data::clear(main, ClearKind::Cache).await?; }
+        browser_data::clear(&account, if reset { ClearKind::AllProfile } else { ClearKind::Cache }).await?;
+        if !reset {
+            // The last WebView owns the profile's session lifetime. Keep this
+            // blank view parked so cache cleanup does not discard session-only
+            // cookies by closing the account's entire browser environment.
+            account.hide().map_err(|_| ClearError::Failed)?;
+            account.set_skip_taskbar(true).map_err(|_| ClearError::Failed)?;
+            return Ok(());
+        }
+        // Never call humble_logout here: its separate semantics remove the
+        // local library. Resetting browser sign-in must retain every saved key.
+        set_auth_state(app, state, AuthState::Unauthenticated);
+        account.destroy().map_err(|_| ClearError::Failed)?;
+        for _ in 0..50 {
+            if app.get_webview_window(LABEL).is_none() { return Ok(()); }
+            tokio::time::sleep(Duration::from_millis(100)).await;
+        }
+        Err(ClearError::Failed)
+    }.await;
+    state.maintenance_ready.store(false, Ordering::Release);
+    if result.as_ref().is_err_and(|failure| failure.uncertain()) {
+        // WebView2 may still be clearing data after an interrupted callback or
+        // timeout. Keep both login and updater blocked until the app restarts.
+        if let Ok(mut held) = state.maintenance_update_guard.lock() { *held = Some(updating); }
+    } else {
+        state.maintenance.store(false, Ordering::Release);
+    }
+    result.map_err(|_| if reset {
+        "Не удалось сбросить вход. Перезапустите приложение и повторите.".to_string()
+    } else {
+        "Не удалось очистить кэш браузера. Перезапустите приложение и повторите.".to_string()
+    })
+}
+
+#[tauri::command]
+pub async fn humble_clear_cache(window: WebviewWindow, app: tauri::AppHandle, state: tauri::State<'_, HumbleState>) -> Result<(), String> {
+    main_only(&window)?;
+    maintain_browser_data(&window, &app, &state, false).await
+}
+
+#[tauri::command]
+pub async fn humble_reset_login(window: WebviewWindow, app: tauri::AppHandle, state: tauri::State<'_, HumbleState>) -> Result<(), String> {
+    main_only(&window)?;
+    maintain_browser_data(&window, &app, &state, true).await
+}
+
 #[tauri::command]
 pub async fn humble_logout(window: WebviewWindow, app: tauri::AppHandle, state: tauri::State<'_, HumbleState>) -> Result<(), String> {
     main_only(&window)?;
+    if state.maintenance.load(Ordering::Acquire) { return Err(error("busy")); }
     let _operation = crate::app_updates::operation()?;
     let _guard = state.operation.try_lock().map_err(|_| error("busy"))?;
     let web = ensure_window(&app, false)?;
@@ -529,6 +633,25 @@ pub fn humble_bridge_result(window: WebviewWindow, app: tauri::AppHandle, state:
 #[cfg(test)]
 mod tests {
     use super::*;
+    #[test] fn browser_maintenance_refuses_active_login_pending_work_and_reentry() {
+        let state = HumbleState::default();
+        assert!(maintenance_available(&state));
+        state.login.lock().unwrap().begin();
+        assert!(!maintenance_available(&state));
+        state.login.lock().unwrap().cancel();
+        assert!(maintenance_available(&state));
+        let (sender, _receiver) = oneshot::channel();
+        *state.pending.lock().unwrap() = Some(Pending { nonce: "synthetic-maintenance".into(), operation: "sync".into(), sender });
+        assert!(!maintenance_available(&state));
+        state.pending.lock().unwrap().take();
+        state.maintenance.store(true, Ordering::Release);
+        assert!(!maintenance_available(&state));
+        assert!(account_navigation(&state, "unused", &"about:blank".parse().unwrap()));
+        assert!(!account_navigation(&state, "unused", &"https://www.humblebundle.com/".parse().unwrap()));
+        assert!(!account_navigation(&state, "unused", &"https://auth.humblebundle.com/login".parse().unwrap()));
+        state.maintenance.store(false, Ordering::Release);
+        assert!(maintenance_available(&state));
+    }
     #[test] fn session_defaults_unknown_and_connected_has_one_source_of_truth() {
         assert_eq!(Library::default().auth_state,AuthState::Unknown);
         for (auth_state,connected,name) in [(AuthState::Unknown,false,"unknown"),(AuthState::Authenticated,true,"authenticated"),(AuthState::Unauthenticated,false,"unauthenticated")] {

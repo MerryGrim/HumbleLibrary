@@ -10,9 +10,9 @@ An unofficial Windows desktop client for your Humble Bundle library. Browse purc
 
 ## Get started
 
-1. Download **HumbleLibrary-0.2.2-Setup-Windows-x64.exe** from the [latest release](https://github.com/MerryGrim/HumbleLibrary/releases/latest), or extract the portable ZIP to its own folder.
+1. Download **HumbleLibrary-0.2.3-Setup-Windows-x64.exe** from the [latest release](https://github.com/MerryGrim/HumbleLibrary/releases/latest), or extract the portable ZIP to its own folder.
 2. Run the installer or `HumbleLibrary.exe`. The MiraUI installer works for the current Windows user without administrator privileges. A desktop shortcut is optional.
-3. Choose **Sign in to Humble**. A separate window opens the official Humble website. Complete your usual sign-in, including two-factor authentication or CAPTCHA if requested.
+3. Choose **Sign in to Humble**. A separate window opens the official Humble website. Use its Sign in action so Humble creates its own authentication flow and return destination. Complete your usual sign-in, including two-factor authentication or CAPTCHA if requested.
 4. After sign-in is confirmed, the window closes and your library refreshes. Closing it early cancels the attempt without reopening the window.
 
 Requires **Windows 10 version 2004 (build 19041) or later, x64, and Microsoft Edge WebView2 Runtime**. Development tools are not needed to use the app.
@@ -58,6 +58,8 @@ Your Humble session and library data stay on your computer. Sign-in takes place 
 Exports are ordinary local files saved where you choose. They contain your keys; keep them private. Do not share the `Data` folder. Release archives contain application files only, without account data or signing secrets.
 
 Uninstalling preserves local user data. Updates preserve the library, session and settings.
+
+Settings also provides **Clear website cache** and **Reset Humble sign-in**. Clearing the cache refreshes temporary website and cover files without signing you out. Resetting sign-in clears Humble's dedicated browser profile and requires a new sign-in, while keeping your saved bundles, keys and application preferences. Close an active sign-in window or finish the current operation before using these actions.
 
 A cached library is not proof of an active session. The app distinguishes an unverified session, a confirmed connection and an authentication failure. Ordinary network errors do not sign you out.
 

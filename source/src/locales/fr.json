@@ -335,5 +335,21 @@
   "Завершите вход в отдельном окне. Библиотека обновится автоматически.": "Terminez la connexion dans la fenêtre séparée. La bibliothèque s’actualisera automatiquement.",
   "Сессия не проверена": "Session non vérifiée",
   "Проверяем сессию…": "Vérification de la session…",
-  "Установка обновлений доступна в установленной или portable-версии.": "L’installation des mises à jour est disponible dans les versions installée et portable."
+  "Установка обновлений доступна в установленной или portable-версии.": "L’installation des mises à jour est disponible dans les versions installée et portable.",
+  "Данные Humble": "Données Humble",
+  "Очистить кэш сайта": "Vider le cache du site",
+  "Удалит временные файлы сайта. Вход, библиотека и ключи сохранятся.": "Supprime les fichiers temporaires du site. La connexion, la bibliothèque et les clés sont conservées.",
+  "Сбросить вход Humble": "Réinitialiser la connexion Humble",
+  "Удалит данные входа на сайте. Библиотека и сохранённые ключи останутся в приложении.": "Supprime les données de connexion au site. La bibliothèque et les clés enregistrées restent dans l’application.",
+  "Сбросить вход Humble?": "Réinitialiser la connexion Humble ?",
+  "Потребуется войти в Humble заново. Бандлы, ключи и настройки приложения сохранятся.": "Vous devrez vous reconnecter à Humble. Les bundles, les clés et les paramètres de l’application sont conservés.",
+  "Очищаем кэш…": "Suppression du cache…",
+  "Сбрасываем вход…": "Réinitialisation de la connexion…",
+  "Кэш сайта очищен.": "Cache du site vidé.",
+  "Вход Humble сброшен. Войдите заново.": "Connexion Humble réinitialisée. Reconnectez-vous.",
+  "Не удалось очистить кэш сайта.": "Impossible de vider le cache du site.",
+  "Не удалось сбросить вход Humble.": "Impossible de réinitialiser la connexion Humble.",
+  "Завершите текущую операцию или закройте окно входа.": "Terminez l’opération en cours ou fermez la fenêtre de connexion.",
+  "Не удалось очистить кэш браузера. Перезапустите приложение и повторите.": "Impossible de vider le cache du navigateur. Redémarrez l’application et réessayez.",
+  "Не удалось сбросить вход. Перезапустите приложение и повторите.": "Impossible de réinitialiser la connexion. Redémarrez l’application et réessayez."
 }

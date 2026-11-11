@@ -335,5 +335,21 @@
   "Завершите вход в отдельном окне. Библиотека обновится автоматически.": "Melden Sie sich im separaten Fenster an. Die Bibliothek wird automatisch aktualisiert.",
   "Сессия не проверена": "Sitzung nicht überprüft",
   "Проверяем сессию…": "Sitzung wird überprüft…",
-  "Установка обновлений доступна в установленной или portable-версии.": "Updates können in der installierten oder portablen Version installiert werden."
+  "Установка обновлений доступна в установленной или portable-версии.": "Updates können in der installierten oder portablen Version installiert werden.",
+  "Данные Humble": "Humble-Daten",
+  "Очистить кэш сайта": "Website-Cache leeren",
+  "Удалит временные файлы сайта. Вход, библиотека и ключи сохранятся.": "Entfernt temporäre Website-Dateien. Anmeldung, Bibliothek und Schlüssel bleiben erhalten.",
+  "Сбросить вход Humble": "Humble-Anmeldung zurücksetzen",
+  "Удалит данные входа на сайте. Библиотека и сохранённые ключи останутся в приложении.": "Entfernt die Anmeldedaten der Website. Bibliothek und gespeicherte Schlüssel bleiben in der App erhalten.",
+  "Сбросить вход Humble?": "Humble-Anmeldung zurücksetzen?",
+  "Потребуется войти в Humble заново. Бандлы, ключи и настройки приложения сохранятся.": "Sie müssen sich erneut bei Humble anmelden. Bundles, Schlüssel und App-Einstellungen bleiben erhalten.",
+  "Очищаем кэш…": "Cache wird geleert…",
+  "Сбрасываем вход…": "Anmeldung wird zurückgesetzt…",
+  "Кэш сайта очищен.": "Website-Cache geleert.",
+  "Вход Humble сброшен. Войдите заново.": "Humble-Anmeldung zurückgesetzt. Melden Sie sich erneut an.",
+  "Не удалось очистить кэш сайта.": "Der Website-Cache konnte nicht geleert werden.",
+  "Не удалось сбросить вход Humble.": "Die Humble-Anmeldung konnte nicht zurückgesetzt werden.",
+  "Завершите текущую операцию или закройте окно входа.": "Beenden Sie den aktuellen Vorgang oder schließen Sie das Anmeldefenster.",
+  "Не удалось очистить кэш браузера. Перезапустите приложение и повторите.": "Der Browser-Cache konnte nicht geleert werden. Starten Sie die App neu und versuchen Sie es erneut.",
+  "Не удалось сбросить вход. Перезапустите приложение и повторите.": "Die Anmeldung konnte nicht zurückgesetzt werden. Starten Sie die App neu und versuchen Sie es erneut."
 }
