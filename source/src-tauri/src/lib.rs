@@ -64,6 +64,7 @@ pub fn run() {
             let _ = std::fs::create_dir_all(storage::root());
             WebviewWindowBuilder::new(app, "main", WebviewUrl::App("index.html".into()))
                 .title("Humble Library").inner_size(1280.0, 800.0).min_inner_size(940.0, 620.0)
+                .center()
                 .decorations(false).drag_and_drop(false)
                 .data_directory(storage::root().join("Interface"))
                 .additional_browser_args("--disable-gpu --disable-gpu-compositing")

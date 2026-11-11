@@ -1,53 +1,110 @@
-# Humble Library 0.2.0
+# Humble Library
 
-Неофициальный Windows-клиент библиотеки Humble Bundle. Интерфейс следует текущему Unreal Manager: единый экран библиотеки, плитки покупок с обложками и список ключей внутри покупки. Поддерживаются все площадки, которые возвращает Humble, включая программные лицензии и составные данные лицензий.
+**Your bundles. Your keys. All in one place.**
 
-## Запуск
+An unofficial Windows desktop client for your Humble Bundle library. Browse purchased bundles, reveal and copy keys, and export them to TXT or CSV. Supports the platforms returned by Humble, including games, software and asset licenses.
 
-Для обычной установки запустите `HumbleLibrary-0.2.0-Setup-Windows-x64.exe`. Установщик MiraUI поддерживает все девять языков приложения, устанавливает программу для текущего пользователя без прав администратора и позволяет выбрать папку и ярлык рабочего стола. Либо распакуйте portable-архив в отдельную папку и запустите `HumbleLibrary.exe`. Требуется Windows x64 и Microsoft Edge WebView2 Runtime. Node.js, Rust и инструменты разработки для запуска не нужны.
+[Project website](https://merrygrim.github.io/HumbleLibrary/) · [Download for Windows](https://github.com/MerryGrim/HumbleLibrary/releases/latest) · [Report an issue](https://github.com/MerryGrim/HumbleLibrary/issues)
 
-Нажмите «Войти в Humble». В отдельном окне откроется официальный сайт: пароль, двухфакторный код и CAPTCHA вводит сам пользователь. После подтверждённого входа окно закроется автоматически и библиотека обновится. Если закрыть окно вручную до завершения входа, попытка отменяется без синхронизации и повторного открытия. Обновление также доступно по кнопке в приложении.
+**По-русски:** клиент библиотеки Humble Bundle для Windows. Бандлы с обложками, раскрытие и копирование ключей, экспорт в TXT/CSV. В приложении и установщике доступны русский и ещё восемь языков. Скачать установщик или portable-версию можно в [релизах](https://github.com/MerryGrim/HumbleLibrary/releases/latest).
 
-Сессия хранится в отдельном профиле WebView2. После установки данные находятся в `%LOCALAPPDATA%\HumbleLibrary\Data`, а в portable-режиме — в папке `Data` рядом с программой. Локальный список покупок и ключи зашифрованы Windows DPAPI для текущего пользователя Windows. Не переносите `Data` вместе с программой другим людям. Установщик, portable-архив и пакет обновления не содержат аккаунта или ключей. Удаление программы сохраняет пользовательские данные.
+## Get started
 
-Сохранённая сессия позволяет обновлять библиотеку без повторного ввода пароля. Наличие локальной библиотеки само по себе не подтверждает вход: до ответа Humble показано «Сессия не проверена» или «Проверяем сессию…». После подтверждённого ответа статус меняется на «Аккаунт подключён» ещё до загрузки всех покупок. «Вход не выполнен» появляется после отказа в авторизации или выхода; обычная сетевая ошибка не выдаётся за выход из аккаунта.
+1. Download **HumbleLibrary-0.2.1-Setup-Windows-x64.exe** from the [latest release](https://github.com/MerryGrim/HumbleLibrary/releases/latest), or extract the portable ZIP to its own folder.
+2. Run the installer or `HumbleLibrary.exe`. The MiraUI installer works for the current Windows user without administrator privileges. A desktop shortcut is optional.
+3. Choose **Sign in to Humble**. A separate window opens the official Humble website. Complete your usual sign-in, including two-factor authentication or CAPTCHA if requested.
+4. After sign-in is confirmed, the window closes and your library refreshes. Closing it early cancels the attempt without reopening the window.
 
-## Ключи и экспорт
+Requires **Windows 10 version 2004 (build 19041) or later, x64, and Microsoft Edge WebView2 Runtime**. Development tools are not needed to use the app.
 
-- Откройте бандл, нажмите «Раскрыть» у товара или «Раскрыть все».
-- Кнопка копирования переносит значение выбранного ключа в системный буфер обмена.
-- TXT содержит раскрытые ключи всех площадок, по значению на строку, без названий и точных повторов. Пробелы в начале и конце значения убираются; регистр и знаки внутри сохраняются.
-- CSV в UTF-8 содержит все позиции, названия, площадки, исходные значения ключей, состояния и инструкции. Составная лицензия сохраняется компактной JSON-строкой.
-- Для ещё скрытых ключей доступно «Раскрыть и экспортировать». Отмена очереди останавливает следующие раскрытия, уже завершённые результаты остаются в списке.
-- «Раскрыт» означает получение ключа в Humble. Приложение не утверждает, что ключ активирован на другой площадке.
-- TXT со смешанными площадками предназначен для архива. В Unreal Manager можно передавать только подходящие ключи Epic/Fab, максимум 100 за импорт; остальные ключи нужно активировать на соответствующей площадке.
+## What it does
 
-Программа не активирует ключи в сторонних магазинах. Если Humble требует действие на сайте издателя, у позиции доступна ссылка или переход на страницу Humble. При неизвестном результате сетевого запроса раскрытие не повторяется автоматически: сначала обновите библиотеку.
+- A single library of purchased bundles, with available cover art fitted without cropping.
+- Search and persistent sorting by purchase date or title. Newest purchases appear first by default.
+- Every key platform returned by Humble, not only Epic/Fab.
+- Reveal one key or a bundle, copy individual keys, or export a selection.
+- TXT for plain key lists; CSV for names, platforms, values, states and instructions.
+- Separate official sign-in window with user-controlled 2FA/CAPTCHA.
+- Light and dark themes, keyboard navigation and dismissible notifications with a copy-text action.
+- Nine languages in both the app and installer: **Русский, English, Deutsch, Italiano, Español, Français, 简体中文, 日本語, 한국어**. System-language selection is also available.
+- Signed updates delivered through GitHub, for installed and portable copies.
 
-## Навигация и настройки
+The [website](https://merrygrim.github.io/HumbleLibrary/) includes an interactive illustration with fictional bundles. It contains no account data or real keys.
 
-«К бандлам», Alt+стрелка влево и нажатие на название приложения возвращают к плиткам. Escape закрывает меню и диалоги. Tab/Shift+Tab перемещают фокус между действиями; после возврата фокус восстанавливается на прежней плитке.
+## Keys and exports
 
-Стандартное контекстное меню отключено; у раскрытого ключа есть только собственное действие копирования (также Shift+F10/клавиша контекстного меню). Статичный текст интерфейса и ключи не выделяются. Поля поиска и настроек сохраняют обычное редактирование. Уведомления закрываются через восемь секунд, при наведении или фокусе таймер приостанавливается. У каждого уведомления есть крестик и копирование отображаемого текста.
+Open a bundle to see its items. Reveal keys individually or use **Reveal all**. **Reveal and export** handles keys that have not been revealed yet. Stopping a queue prevents subsequent reveals; completed results remain in the library.
 
-Шестерёнка в шапке открывает настройки. Доступны светлая/тёмная темы и те же языки, что в Unreal Manager: русский, английский, немецкий, итальянский, испанский, французский, упрощённый китайский, японский и корейский, а также системный язык с английским запасным вариантом. Значения ключей, названия покупок и инструкции поставщиков не переводятся.
+| Format | Contents |
+| --- | --- |
+| TXT | Revealed key values, one per line, without names or exact duplicates. Leading and trailing whitespace is removed; case and internal characters are preserved. |
+| CSV | All selected items, with names, platforms, original key values, states and instructions. Structured licenses are preserved as compact JSON. |
 
-По умолчанию бандлы отсортированы по дате покупки от новых к старым. Поле «Сортировка» позволяет выбрать обратный порядок дат или название в обоих направлениях; выбор сохраняется. Обложка использует логотип/баннер покупки, если он доступен, в том числе изображение внутри ссылки `a#logo` на странице покупки. Изображение пропорционально вписывается целиком; размер плиток не меняется. Если в восстановленной библиотеке нет обложек, при запуске выполняется одна попытка обновления; при отменённом входе она не запускается.
+**Revealed does not mean activated.** The app does not activate keys on other platforms or infer whether they have been redeemed. Items requiring a publisher website retain their instructions and link.
 
-## GitHub-обновления
+For Unreal Manager, export only compatible Epic/Fab keys. Its TXT import accepts up to 100 unique keys at a time; a mixed-platform TXT export is an archive, not a universal activation file.
 
-В настройках доступны автоматическая проверка (при запуске, не чаще раза в сутки), ручная проверка, загрузка и установка стабильного выпуска. Канал по умолчанию — `MerryGrim/HumbleLibrary` на GitHub. Сохранённое отключение проверки или другой источник сохраняются. Источник задаётся как `владелец/репозиторий`; его можно очистить, чтобы отключить канал. Приложение не сообщает о наличии актуальной версии без успешной проверки. Автоматическая проверка не устанавливает выпуск без нажатия «Скачать и установить».
+A reveal request with an uncertain network result is not retried automatically. Refresh the library before trying again.
 
-Обновления принимаются только при действительной подписи манифеста отдельным ключом приложения ECDSA P-256/SHA-256 и совпадении версии, репозитория, размеров и SHA-256. Установка доступна в установленной и portable-версиях с именем `HumbleLibrary.exe` и соответствующим маркером установки. Помощник заменяет только EXE и три сопроводительных документа; пользовательские данные, настройки, сессия и служебные файлы установщика сохраняются. При неудачном запуске новой версии выполняется откат. Журнал восстановления защищён Windows DPAPI. Во время входа в аккаунт или активной операции установка не запускается.
+## Privacy & data
 
-Для публикации используются `source/CREATE-UPDATE-KEY.ps1` (только первоначальное создание ключа отдельного приложения) и `source/PREPARE-UPDATE.ps1`. Закрытый ключ лежит в `.release-secrets` и никогда не входит в исходники/архивы. На GitHub Release с тегом `v<версия>` публикуются `update-manifest.json`, `update-manifest.sig` и соответствующий `.hlupdate`, а также обычный portable ZIP. Привязка к конкретному репозиторию и публикация первого релиза выполняются отдельно.
+Your Humble session and library data stay on your computer. Sign-in takes place on Humble's official website; the application does not provide a custom password or two-factor-code form. Session files use a dedicated WebView2 profile. The local library cache, including cached keys, is protected with Windows DPAPI for the current Windows user.
 
-## Проверка версии
+| Edition | Local data location |
+| --- | --- |
+| Installed | `%LOCALAPPDATA%\HumbleLibrary\Data` |
+| Portable | `Data` beside `HumbleLibrary.exe` |
 
-Производственная Windows-сборка, DPAPI, правила origin/IPC, экспорт, интерфейс, девять языков, уведомления, проверка подписи, ограничения пакета и файловый откат проверяются локально. Официальная страница входа загружена в отдельном окне Windows после исправления блокировки WebView2. Установка подписанного локального пакета реально проверена между служебными сборками 0.1.0 и 0.1.1 в изолированном профиле: готовность нового интерфейса подтверждена, все четыре файла совпали, контрольные данные сохранены. Эти служебные сборки не являются опубликованными версиями. Тесты протокола и интерфейса используют синтетические данные. Работа с конкретным аккаунтом, 2FA, реальным раскрытием и доставка через опубликованный GitHub-релиз требуют отдельного подтверждения. Это не официальный клиент Humble Bundle.
+Exports are ordinary local files saved where you choose. They contain your keys; keep them private. Do not share the `Data` folder. Release archives contain application files only, without account data or signing secrets.
 
-## Разработка
+Uninstalling preserves local user data. Updates preserve the library, session and settings.
 
-`source/BUILD-ENV.ps1` настраивает локальные инструменты в `D:\AI\Tools`, кэши и временные файлы на D:. Сборка: `Build-HumbleLibrary.cmd`.
+A cached library is not proof of an active session. The app distinguishes an unverified session, a confirmed connection and an authentication failure. Ordinary network errors do not sign you out.
 
-Проверки: `verification/test-key-export.cjs`, `verification/test-humble-protocol.cjs`, `verification/test-library-ui.cjs` и `cargo test --release --locked --offline --lib`. Для браузерной проверки запустите Vite и передайте локальный адрес в `test-library-ui.cjs`. Синтетический preview доступен только в обычном браузере с `?preview=1`, в нативном клиенте не включается.
+## Updates
+
+The default channel is **MerryGrim/HumbleLibrary** on GitHub. Automatic checking runs at startup at most once per day; manual checking is available in Settings. A saved disabled setting or custom repository is preserved. **Download and install** remains a user action.
+
+Before installing, the app verifies an ECDSA P-256/SHA-256 manifest signature, the release version and repository, file sizes and SHA-256 hashes. The updater replaces only the executable and its three accompanying documents. User data and installer files are preserved; a failed restart triggers rollback.
+
+Do not rename `HumbleLibrary.exe` or remove its installation marker. Installing an update is unavailable during an active operation or sign-in.
+
+## Navigation
+
+**All bundles**, **Alt+Left**, or the app title returns to the library. **Escape** closes menus and dialogs. **Tab/Shift+Tab** navigates controls. Returning from a bundle restores focus to its tile.
+
+Static text is not selectable. Revealed keys have a dedicated copy action and context menu, also accessible with **Shift+F10**. Notifications close after eight seconds; hovering or focusing pauses their timer. Each notification has a close button and a copy-text action.
+
+## Build from source
+
+The application uses **Tauri 2, Rust, React, TypeScript and Vite**. On Windows, install Node.js, Rust with the MSVC toolchain, Visual Studio C++ Build Tools, the Windows SDK and WebView2 Runtime.
+
+```powershell
+cd source
+npm ci
+npm run tauri -- build --no-bundle -- --locked
+```
+
+The native executable is produced in `source/src-tauri/target/release/`. The repository's `Build-HumbleLibrary.cmd` and `source/BUILD-ENV.ps1` are maintainer conveniences configured for tools under `D:\AI\Tools`; adjust those paths for your machine or use the commands above.
+
+The MiraUI setup additionally requires **PowerShell 7 and Inno Setup 7**. See [installer/README.md](installer/README.md) for packaging and isolated installer checks. The GitHub Pages site in `docs/` is static HTML/CSS/JavaScript and requires no build.
+
+### Checks
+
+From the repository root:
+
+```powershell
+node verification/test-key-export.cjs
+node verification/test-humble-protocol.cjs
+cargo test --release --locked --offline --lib --manifest-path source/src-tauri/Cargo.toml
+```
+
+The offline Rust command requires dependencies to have been fetched by a prior build. Browser tests use synthetic preview data, separated from production profiles. `verification/test-library-ui.cjs` accepts the local Vite URL as its first argument. Preview mode (`?preview=1`) is available in an ordinary browser and is disabled in the native application.
+
+Release preparation uses `source/PACKAGE-PORTABLE.ps1`, `installer/build-installer.ps1`, `source/PREPARE-UPDATE.ps1` and `verification/Package-Source.ps1`. Signing material in `.release-secrets/` is private and excluded from Git and release archives. `CREATE-UPDATE-KEY.ps1` is only for the initial creation of a new application's signing key; do not replace an existing key when preparing an update.
+
+## Status & license
+
+Humble Library is an **independent, unofficial project**, not affiliated with or endorsed by Humble Bundle. Humble may change its website or access requirements. Platform names and trademarks belong to their owners.
+
+Licensed under [MIT](LICENSE). Dependency and installer notices are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
