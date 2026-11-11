@@ -88,13 +88,26 @@ async function main() {
     await env.request({operation:'sync'});
     assert.deepEqual(env.sent,[{kind:'session',authenticated:true},{kind:'result',ok:false,reason:'auth'}]);
   });
-  await check('Adapter attaches only to the exact official HTTPS origin and top-level frame', async () => {
+  await check('Adapter attaches only to exact storefront HTTPS origins and top-level frames', async () => {
     for (const [origin, top] of [
       ['https://www.humblebundle.com.evil.test', true], ['http://www.humblebundle.com', true],
-      ['https://humblebundle.com', true], ['https://www.humblebundle.com', false],
+      ['https://auth.humblebundle.com', true], ['http://humblebundle.com', true],
+      ['https://www.humblebundle.com:444', true], ['https://humblebundle.com:444', true],
+      ['https://www.humblebundle.com', false], ['https://humblebundle.com', false],
     ]) {
       const env = environment(async () => { throw new Error('Unexpected HTTP'); }, origin, top);
       assert.equal(env.window.__humbleLibraryRequest, undefined);
+    }
+  });
+  await check('Both canonical storefront origins synchronize the same validated bundle format', async () => {
+    for (const origin of ['https://www.humblebundle.com', 'https://humblebundle.com']) {
+      const calls = [];
+      const env = environment(async url => { calls.push(url); return url === '/api/v1/user/order' ? response(['bundle_A']) : response(order()); }, origin);
+      await env.request({ operation: 'sync' });
+      assert.deepEqual(calls, ['/api/v1/user/order', '/api/v1/order/bundle_A?all_tpkds=true']);
+      assert.equal(env.sent.at(-1).ok, true);
+      assert.equal(env.sent.at(-1).bundles[0].id, 'bundle_A');
+      assert.deepEqual(env.sent[0], { kind: 'session', authenticated: true });
     }
   });
   await check('Sync preserves mixed purchases, source states and an empty image without a fake homepage', async () => {
@@ -129,6 +142,9 @@ async function main() {
         posts += 1; const body = new URLSearchParams(options.body);
         assert.equal(body.get('keyindex'), '0'); assert.equal(body.get('keytype'), 'game'); assert.equal(body.get('key'), 'bundle_A');
         assert.equal(options.headers['CSRF-Prevention-Token'], 'SYNTHETIC-CSRF-ONLY');
+        assert.equal(options.headers.Accept, 'application/json');
+        assert.equal(options.headers['Content-Type'], 'application/x-www-form-urlencoded; charset=UTF-8');
+        assert.equal(options.headers['X-Requested-With'], 'XMLHttpRequest');
         return response({ success: true, key: 'SYNTHETIC-KEY' });
       }
       return response(clone(value));

@@ -18,6 +18,7 @@ export interface UpdateView {
 interface Props {
   update: UpdateView;
   appBusy: boolean;
+  fullResetBlocked?: boolean;
   onClose: () => void;
   onAutoCheck: (enabled: boolean) => void;
   onRepositorySave: (repository: string) => Promise<void>;
@@ -27,41 +28,45 @@ interface Props {
   onDismissMessage: () => void;
   onClearCache: () => Promise<void>;
   onResetLogin: () => Promise<void>;
+  onResetAll: () => Promise<void>;
 }
 
-export default function SettingsDialog({ update, appBusy, onClose, onAutoCheck, onRepositorySave, onCheck, onInstall, onOpenRelease, onDismissMessage, onClearCache, onResetLogin }: Props) {
+export default function SettingsDialog({ update, appBusy, fullResetBlocked, onClose, onAutoCheck, onRepositorySave, onCheck, onInstall, onOpenRelease, onDismissMessage, onClearCache, onResetLogin, onResetAll }: Props) {
   const { language, setLanguage } = useLanguage();
   const dialog = useRef<HTMLDivElement>(null);
   const [repository, setRepository] = useState(update.source);
   const [saving, setSaving] = useState(false);
   const [repositoryError, setRepositoryError] = useState(false);
-  const [confirmReset, setConfirmReset] = useState(false);
-  const [maintenance, setMaintenance] = useState<'cache' | 'login' | null>(null);
+  const [confirmReset, setConfirmReset] = useState<'login' | 'all' | null>(null);
+  const [maintenance, setMaintenance] = useState<'cache' | 'login' | 'all' | null>(null);
   const [maintenanceMessage, setMaintenanceMessage] = useState<{ text: string; kind: 'success' | 'error' } | null>(null);
   const maintenanceLock = useRef(false);
   const resetButton = useRef<HTMLButtonElement>(null);
+  const resetAllButton = useRef<HTMLButtonElement>(null);
   const resetCancel = useRef<HTMLButtonElement>(null);
-  const wasConfirming = useRef(false);
+  const wasConfirming = useRef<'login' | 'all' | null>(null);
   const working = ['checking', 'downloading', 'installing'].includes(update.phase);
   const dataBlocked = appBusy || working || saving || maintenance !== null;
+  const allDataBlocked = (fullResetBlocked ?? appBusy) || working || saving || maintenance !== null;
   const close = () => {
     if (maintenanceLock.current) return;
-    if (confirmReset) setConfirmReset(false); else onClose();
+    if (confirmReset) setConfirmReset(null); else onClose();
   };
-  const maintain = async (kind: 'cache' | 'login') => {
-    if (maintenanceLock.current || dataBlocked) return;
+  const maintain = async (kind: 'cache' | 'login' | 'all') => {
+    if (maintenanceLock.current || (kind === 'all' ? allDataBlocked : dataBlocked)) return;
     maintenanceLock.current = true; setMaintenance(kind); setMaintenanceMessage(null);
     try {
-      await (kind === 'cache' ? onClearCache() : onResetLogin());
-      setMaintenanceMessage({ text: kind === 'cache' ? 'Кэш сайта очищен.' : 'Вход Humble сброшен. Войдите заново.', kind: 'success' });
-      if (kind === 'login') setConfirmReset(false);
+      await (kind === 'cache' ? onClearCache() : kind === 'login' ? onResetLogin() : onResetAll());
+      setMaintenanceMessage({ text: kind === 'cache' ? 'Кэш сайта очищен.' : kind === 'login' ? 'Вход Humble сброшен. Войдите заново.' : 'Данные Humble очищены. Войдите заново для чистой синхронизации.', kind: 'success' });
+      if (kind !== 'cache') setConfirmReset(null);
     } catch (caught) {
-      setMaintenanceMessage({ text: typeof caught === 'string' ? caught : caught instanceof Error ? caught.message : kind === 'cache' ? 'Не удалось очистить кэш сайта.' : 'Не удалось сбросить вход Humble.', kind: 'error' });
+      setMaintenanceMessage({ text: typeof caught === 'string' ? caught : caught instanceof Error ? caught.message : kind === 'cache' ? 'Не удалось очистить кэш сайта.' : kind === 'login' ? 'Не удалось сбросить вход Humble.' : 'Не удалось полностью очистить данные Humble. Перезапустите приложение и повторите.', kind: 'error' });
     } finally { maintenanceLock.current = false; setMaintenance(null); }
   };
   useEffect(() => {
     if (confirmReset) resetCancel.current?.focus();
-    else if (wasConfirming.current) resetButton.current?.focus();
+    else if (wasConfirming.current === 'all') resetAllButton.current?.focus();
+    else if (wasConfirming.current === 'login') resetButton.current?.focus();
     wasConfirming.current = confirmReset;
   }, [confirmReset]);
   useEffect(() => setRepository(update.source), [update.source]);
@@ -95,16 +100,17 @@ export default function SettingsDialog({ update, appBusy, onClose, onAutoCheck, 
       if (!event.shiftKey && (document.activeElement === last || !dialog.current?.contains(document.activeElement))) { event.preventDefault(); first.focus(); }
     }
   }}><div className="dialog settings-dialog" role={confirmReset ? 'alertdialog' : 'dialog'} aria-modal="true" aria-labelledby="settings-title" aria-describedby={confirmReset ? 'reset-login-description' : undefined} ref={dialog}>
-    <div className="dialog-head"><h2 id="settings-title">{confirmReset ? <LogOut size={20} /> : <Settings size={20} />}{tr(confirmReset ? 'Сбросить вход Humble?' : 'Настройки')}</h2><button className="icon" aria-label={tr(confirmReset ? 'Отмена' : 'Закрыть настройки')} disabled={maintenance !== null} onClick={close}><X size={18} /></button></div>
+    <div className="dialog-head"><h2 id="settings-title">{confirmReset === 'all' ? <Eraser size={20} /> : confirmReset ? <LogOut size={20} /> : <Settings size={20} />}{tr(confirmReset === 'all' ? 'Очистить все данные Humble' : confirmReset ? 'Сбросить вход Humble?' : 'Настройки')}</h2><button className="icon" aria-label={tr(confirmReset ? 'Отмена' : 'Закрыть настройки')} disabled={maintenance !== null} onClick={close}><X size={18} /></button></div>
     {maintenanceMessage && <div className="settings-notification"><Notification message={trError(maintenanceMessage.text)} kind={maintenanceMessage.kind} onClose={() => setMaintenanceMessage(null)} /></div>}
     {confirmReset ? <div className="settings-reset-confirmation">
-      <p id="reset-login-description">{tr('Потребуется войти в Humble заново. Бандлы, ключи и настройки приложения сохранятся.')}</p>
-      <div className="dialog-actions"><button ref={resetCancel} disabled={maintenance !== null} onClick={() => setConfirmReset(false)}>{tr('Отмена')}</button><button className="primary" disabled={dataBlocked} onClick={() => void maintain('login')}>{maintenance === 'login' ? <LoaderCircle size={16} className="spin" /> : <LogOut size={16} />}{tr(maintenance === 'login' ? 'Сбрасываем вход…' : 'Сбросить вход Humble')}</button></div>
+      <p id="reset-login-description">{tr(confirmReset === 'all' ? 'Будут удалены локальная библиотека, сохранённые ключи, кэш и сессия Humble. Для новой синхронизации потребуется войти заново.' : 'Потребуется войти в Humble заново. Бандлы, ключи и настройки приложения сохранятся.')}</p>
+      <div className="dialog-actions"><button ref={resetCancel} disabled={maintenance !== null} onClick={() => setConfirmReset(null)}>{tr('Отмена')}</button><button className="primary" disabled={confirmReset === 'all' ? allDataBlocked : dataBlocked} onClick={() => void maintain(confirmReset)}>{maintenance === confirmReset ? <LoaderCircle size={16} className="spin" /> : confirmReset === 'all' ? <Eraser size={16} /> : <LogOut size={16} />}{tr(confirmReset === 'all' ? maintenance === 'all' ? 'Очищаем данные Humble…' : 'Удалить локальные данные' : maintenance === 'login' ? 'Сбрасываем вход…' : 'Сбросить вход Humble')}</button></div>
     </div> : <>
     <section className="settings-section"><h3>{tr('Интерфейс')}</h3><div className="settings-row"><div><label htmlFor="interface-language">{tr('Язык')}</label><p>{tr('Язык интерфейса приложения')}</p></div><select id="interface-language" value={language} onChange={event => setLanguage(event.target.value as typeof language)}>{languages.map(item => <option key={item.value} value={item.value}>{item.value === 'system' ? tr('Как в системе') : item.label}</option>)}</select></div></section>
     <section className="settings-section settings-data"><h3>{tr('Данные Humble')}</h3>
       <div className="settings-data-row"><div><h4>{tr('Очистить кэш сайта')}</h4><p>{tr('Удалит временные файлы сайта. Вход, библиотека и ключи сохранятся.')}</p></div><button disabled={dataBlocked} onClick={() => void maintain('cache')}>{maintenance === 'cache' ? <LoaderCircle size={16} className="spin" /> : <Eraser size={16} />}{tr(maintenance === 'cache' ? 'Очищаем кэш…' : 'Очистить кэш сайта')}</button></div>
-      <div className="settings-data-row"><div><h4>{tr('Сбросить вход Humble')}</h4><p>{tr('Удалит данные входа на сайте. Библиотека и сохранённые ключи останутся в приложении.')}</p></div><button ref={resetButton} disabled={dataBlocked} onClick={() => { setMaintenanceMessage(null); setConfirmReset(true); }}><LogOut size={16} />{tr('Сбросить вход Humble')}</button></div>
+      <div className="settings-data-row"><div><h4>{tr('Сбросить вход Humble')}</h4><p>{tr('Удалит данные входа на сайте. Библиотека и сохранённые ключи останутся в приложении.')}</p></div><button ref={resetButton} disabled={dataBlocked} onClick={() => { setMaintenanceMessage(null); setConfirmReset('login'); }}><LogOut size={16} />{tr('Сбросить вход Humble')}</button></div>
+      <div className="settings-data-row"><div><h4>{tr('Очистить все данные Humble')}</h4><p>{tr('Будут удалены локальная библиотека, сохранённые ключи, кэш и сессия Humble. Для новой синхронизации потребуется войти заново.')}</p></div><button ref={resetAllButton} disabled={allDataBlocked} onClick={() => { setMaintenanceMessage(null); setConfirmReset('all'); }}><Eraser size={16} />{tr('Очистить все данные Humble')}</button></div>
       {appBusy && <p className="update-message">{tr('Завершите текущую операцию или закройте окно входа.')}</p>}
     </section>
     <section className="settings-section"><div className="settings-section-title"><h3>{tr('Обновления')}</h3><span>{tr('Версия {version}', { version: update.currentVersion })}</span></div>

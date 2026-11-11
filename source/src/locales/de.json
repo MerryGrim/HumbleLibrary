@@ -351,5 +351,19 @@
   "Не удалось сбросить вход Humble.": "Die Humble-Anmeldung konnte nicht zurückgesetzt werden.",
   "Завершите текущую операцию или закройте окно входа.": "Beenden Sie den aktuellen Vorgang oder schließen Sie das Anmeldefenster.",
   "Не удалось очистить кэш браузера. Перезапустите приложение и повторите.": "Der Browser-Cache konnte nicht geleert werden. Starten Sie die App neu und versuchen Sie es erneut.",
-  "Не удалось сбросить вход. Перезапустите приложение и повторите.": "Die Anmeldung konnte nicht zurückgesetzt werden. Starten Sie die App neu und versuchen Sie es erneut."
+  "Не удалось сбросить вход. Перезапустите приложение и повторите.": "Die Anmeldung konnte nicht zurückgesetzt werden. Starten Sie die App neu und versuchen Sie es erneut.",
+  "Ключи не обновлены": "Schlüssel nicht aktualisiert",
+  "Ключи этого бандла пока не загружены полностью.": "Die Schlüssel dieses Bundles wurden noch nicht vollständig geladen.",
+  "Не все бандлы удалось обновить. Ранее сохранённые ключи оставлены в библиотеке.": "Nicht alle Bundles konnten aktualisiert werden. Bereits gespeicherte Schlüssel bleiben in der Bibliothek erhalten.",
+  "Загружаем список покупок": "Kaufliste wird geladen",
+  "Загружаем ключи": "Schlüssel werden geladen",
+  "Бандлы: {completed} из {total}": "Bundles: {completed} von {total}",
+  "Очистить все данные Humble": "Alle Humble-Daten löschen",
+  "Будут удалены локальная библиотека, сохранённые ключи, кэш и сессия Humble. Для новой синхронизации потребуется войти заново.": "Die lokale Bibliothek, gespeicherte Schlüssel, der Cache und die Humble-Sitzung werden gelöscht. Für eine neue Synchronisierung müssen Sie sich erneut anmelden.",
+  "Удалить локальные данные": "Lokale Daten löschen",
+  "Очищаем данные Humble…": "Humble-Daten werden gelöscht…",
+  "Не удалось полностью очистить данные Humble. Перезапустите приложение и повторите.": "Humble-Daten konnten nicht vollständig gelöscht werden. Starten Sie die Anwendung neu und versuchen Sie es erneut.",
+  "Данные Humble очищены. Войдите заново для чистой синхронизации.": "Die Humble-Daten wurden gelöscht. Melden Sie sich für eine neue Synchronisierung erneut an.",
+  "Список покупок загружен не полностью. Доступные бандлы сохранены; обновите библиотеку, чтобы продолжить.": "Die Kaufliste ist unvollständig. Verfügbare Bundles wurden gespeichert; aktualisieren Sie die Bibliothek, um fortzufahren.",
+  "Загрузка продолжится через {seconds} сек. · попытка {attempt}": "Der Ladevorgang wird in {seconds} Sek. fortgesetzt · Versuch {attempt}"
 }

@@ -351,5 +351,19 @@
   "Не удалось сбросить вход Humble.": "Impossibile reimpostare l’accesso a Humble.",
   "Завершите текущую операцию или закройте окно входа.": "Completa l’operazione in corso o chiudi la finestra di accesso.",
   "Не удалось очистить кэш браузера. Перезапустите приложение и повторите.": "Impossibile svuotare la cache del browser. Riavvia l’app e riprova.",
-  "Не удалось сбросить вход. Перезапустите приложение и повторите.": "Impossibile reimpostare l’accesso. Riavvia l’app e riprova."
+  "Не удалось сбросить вход. Перезапустите приложение и повторите.": "Impossibile reimpostare l’accesso. Riavvia l’app e riprova.",
+  "Ключи не обновлены": "Chiavi non aggiornate",
+  "Ключи этого бандла пока не загружены полностью.": "Le chiavi di questo bundle non sono ancora state caricate completamente.",
+  "Не все бандлы удалось обновить. Ранее сохранённые ключи оставлены в библиотеке.": "Non è stato possibile aggiornare tutti i bundle. Le chiavi salvate in precedenza restano nella libreria.",
+  "Загружаем список покупок": "Caricamento elenco acquisti",
+  "Загружаем ключи": "Caricamento delle chiavi",
+  "Бандлы: {completed} из {total}": "Bundle: {completed} di {total}",
+  "Очистить все данные Humble": "Cancella tutti i dati Humble",
+  "Будут удалены локальная библиотека, сохранённые ключи, кэш и сессия Humble. Для новой синхронизации потребуется войти заново.": "Verranno eliminati la libreria locale, le chiavi salvate, la cache e la sessione Humble. Per una nuova sincronizzazione sarà necessario accedere di nuovo.",
+  "Удалить локальные данные": "Elimina dati locali",
+  "Очищаем данные Humble…": "Cancellazione dati Humble…",
+  "Не удалось полностью очистить данные Humble. Перезапустите приложение и повторите.": "Impossibile cancellare completamente i dati Humble. Riavvia l'applicazione e riprova.",
+  "Данные Humble очищены. Войдите заново для чистой синхронизации.": "I dati Humble sono stati cancellati. Accedi di nuovo per una nuova sincronizzazione.",
+  "Список покупок загружен не полностью. Доступные бандлы сохранены; обновите библиотеку, чтобы продолжить.": "L'elenco degli acquisti non è completo. I bundle disponibili sono stati salvati; aggiorna la libreria per continuare.",
+  "Загрузка продолжится через {seconds} сек. · попытка {attempt}": "Il caricamento riprenderà tra {seconds} s · tentativo {attempt}"
 }

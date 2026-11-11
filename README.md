@@ -4,13 +4,17 @@
 
 An unofficial Windows desktop client for your Humble Bundle library. Browse purchased bundles, reveal and copy keys, and export them to TXT or CSV. Supports the platforms returned by Humble, including games, software and asset licenses.
 
+Updated for Humble Bundle’s redesigned sign-in and library.
+
 [Project website](https://merrygrim.github.io/HumbleLibrary/) · [Download for Windows](https://github.com/MerryGrim/HumbleLibrary/releases/latest) · [Report an issue](https://github.com/MerryGrim/HumbleLibrary/issues)
 
-**По-русски:** клиент библиотеки Humble Bundle для Windows. Бандлы с обложками, раскрытие и копирование ключей, экспорт в TXT/CSV. В приложении и установщике доступны русский и ещё восемь языков. Скачать установщик или portable-версию можно в [релизах](https://github.com/MerryGrim/HumbleLibrary/releases/latest).
+**По-русски:** клиент библиотеки Humble Bundle для Windows. Бандлы плиткой, раскрытие и копирование ключей, экспорт в TXT/CSV. В приложении и установщике доступны русский и ещё восемь языков. Скачать установщик или portable-версию можно в [релизах](https://github.com/MerryGrim/HumbleLibrary/releases/latest).
+
+Обновлено для новой авторизации и библиотеки Humble Bundle.
 
 ## Get started
 
-1. Download **HumbleLibrary-0.2.4-Setup-Windows-x64.exe** from the [latest release](https://github.com/MerryGrim/HumbleLibrary/releases/latest), or extract the portable ZIP to its own folder.
+1. Download the Windows installer from the [latest release](https://github.com/MerryGrim/HumbleLibrary/releases/latest), or extract the portable ZIP to its own folder.
 2. Run the installer or `HumbleLibrary.exe`. The MiraUI installer works for the current Windows user without administrator privileges. A desktop shortcut is optional.
 3. Choose **Sign in to Humble**. A separate window opens the official Humble sign-in form directly at `auth.humblebundle.com/login`. Humble creates a fresh authentication flow automatically. Complete your usual sign-in, including two-factor authentication or CAPTCHA if requested.
 4. After sign-in is confirmed, the window closes and your library refreshes. Closing it early cancels the attempt without reopening the window.
@@ -19,12 +23,15 @@ Requires **Windows 10 version 2004 (build 19041) or later, x64, and Microsoft Ed
 
 ## What it does
 
-- A single library of purchased bundles, with available cover art fitted without cropping.
+- A single library based on Humble's Bundles collection: one tile per bundle, with its keys and downloads inside. The separate Purchased product list is not turned into bundle tiles. Covers currently use placeholders while banner loading is paused.
 - Search and persistent sorting by purchase date or title. Newest purchases appear first by default.
 - Every key platform returned by Humble, not only Epic/Fab.
 - Reveal one key or a bundle, copy individual keys, or export a selection.
 - TXT for plain key lists; CSV for names, platforms, values, states and instructions.
 - Separate official sign-in window with user-controlled 2FA/CAPTCHA.
+- Unavailable purchase details are marked separately while the rest of the library updates; previously cached keys for that purchase remain available.
+- Sequential bundle reads with bounded retries and cancellation. Incomplete bundle details are explicitly marked and retain matching cached keys from the same account.
+- Separate browser-cache cleanup, sign-in reset and full local Humble data reset. A full reset clears the local library and keys, browser cache and sign-in session before a fresh login.
 - Light and dark themes, keyboard navigation and dismissible notifications with a copy-text action.
 - Nine languages in both the app and installer: **Русский, English, Deutsch, Italiano, Español, Français, 简体中文, 日本語, 한국어**. System-language selection is also available.
 - Signed updates delivered through GitHub, for installed and portable copies.
@@ -48,7 +55,7 @@ A reveal request with an uncertain network result is not retried automatically. 
 
 ## Privacy & data
 
-Your Humble session and library data stay on your computer. Sign-in takes place on Humble's official website in a dedicated window, which may navigate to `auth.humblebundle.com` for authentication. Passwords and two-factor codes are entered on that website; the application does not provide its own credential form. Privileged app operations (IPC) are enabled only on `www.humblebundle.com`; the authentication host is not permitted to run library, key or export commands. Session files use a dedicated WebView2 profile. The local library cache, including cached keys, is protected with Windows DPAPI for the current Windows user.
+Your Humble session and library data stay on your computer. Sign-in takes place on Humble's official website in a dedicated window, which may navigate to `auth.humblebundle.com` for authentication. Passwords and two-factor codes are entered on that website; the application does not provide its own credential form. The account-window callback is allowed only on the exact `www.humblebundle.com` and `humblebundle.com` storefront origins; the authentication host is not permitted to run library, key or export commands. Session files use a dedicated WebView2 profile. The local library cache, including cached keys, is protected with Windows DPAPI for the current Windows user.
 
 | Edition | Local data location |
 | --- | --- |
@@ -59,9 +66,17 @@ Exports are ordinary local files saved where you choose. They contain your keys;
 
 Uninstalling preserves local user data. Updates preserve the library, session and settings.
 
+Synchronization keeps an encrypted completeness marker and the time of the last complete refresh. Before replacing a nonempty library whose account binding is unknown or different, the app preserves an encrypted local archive. Account libraries are never merged across different bindings. **Clear all Humble data** also removes these app-owned archives; exported files remain where you saved them.
+
+An older cache may contain individual products shown incorrectly as bundles. Migration hides those old tiles while preserving previously saved values in encrypted local storage. New bundle details can restore retained keys only by an exact, unambiguous parent-bundle and entitlement-ID match for the same account. Values without a verified parent remain private rather than being attached to another bundle.
+
 Settings also provides **Clear website cache** and **Reset Humble sign-in**. Clearing the cache refreshes temporary website and cover files without signing you out. Resetting sign-in clears Humble's dedicated browser profile and requires a new sign-in, while keeping your saved bundles, keys and application preferences. Close an active sign-in window or finish the current operation before using these actions.
 
+A bounded local sign-in diagnostic report is kept at `Data/Diagnostics/auth-last.json`. It contains only fixed stage/error codes, HTTP status numbers and the number of loaded bundles; it contains no account names, page contents, cookies, tokens or keys.
+
 A cached library is not proof of an active session. The app distinguishes an unverified session, a confirmed connection and an authentication failure. Ordinary network errors do not sign you out.
+
+The synchronization design and its verification limits are documented in [source/SYNCHRONIZATION.md](source/SYNCHRONIZATION.md).
 
 ## Updates
 

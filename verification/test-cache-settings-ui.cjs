@@ -16,10 +16,10 @@ export const api={preview:false,
  login:async()=>{f.calls.push('login');return {attemptId:'synthetic-login-attempt'};},
  clearCache:async()=>{f.calls.push('clear');if(f.failClear)throw Error('Не удалось очистить кэш сайта.');if(f.holdClear)await new Promise(resolve=>f.pendingClear=resolve);},
  resetLogin:async()=>{f.calls.push('reset');if(f.failReset)throw Error('Не удалось сбросить вход Humble.');connected=false;window.__cacheEmit('session',{connected:false,authState:'unauthenticated'});},
- sync:async()=>{f.calls.push('sync');return structuredClone(bundles);},
+ sync:async()=>{f.calls.push('sync');return {connected,authState:connected?'authenticated':'unauthenticated',bundles:structuredClone(bundles),enumerationComplete:true};},
  copy:async text=>{f.copied=text;},
  onLoginCompleted:callback=>subscribe('completed',callback),onLoginCancelled:callback=>subscribe('cancelled',callback),onSessionStatus:callback=>subscribe('session',callback),
- onProgress:callback=>subscribe('progress',callback),onWarning:callback=>subscribe('warning',callback),onUpdateProgress:callback=>subscribe('update',callback),
+ onSyncActivity:async()=>()=>{},onProgress:callback=>subscribe('progress',callback),onWarning:callback=>subscribe('warning',callback),onUpdateProgress:callback=>subscribe('update',callback),
  updateStatus:async()=>({enabled:false,repository:'',configured:false,currentVersion:'0.2.3',mode:'portable',supported:true}),
  setNativeLanguage:async()=>{},updateReady:async()=>{},checkUpdates:async()=>({status:'disabled',release:null}),
  logout:async()=>{throw Error('Logout must not implement reset');},cancel:async()=>{},openExternal:async()=>{throw Error('External access forbidden');},reveal:async()=>{throw Error('Reveal forbidden');},exportKeys:async()=>{throw Error('Export forbidden');}
@@ -44,7 +44,7 @@ const check = name => { report.checks.push(name); console.log('PASS '+name); };
     const page=await context.newPage();page.on('pageerror',error=>report.errors.push(error.message));
     await page.goto('https://cache-fixture.invalid/');await page.evaluate(()=>localStorage.setItem('humble-library-language','ru'));await page.addScriptTag({content:code});
     await page.locator('.bundle-tile').waitFor();await page.locator('.settings-button').click();
-    const dialog=page.locator('.settings-dialog'), clear=dialog.locator('.settings-data-row').first().locator('button'), reset=dialog.locator('.settings-data-row').last().locator('button');
+    const dialog=page.locator('.settings-dialog'), clear=dialog.locator('.settings-data-row').nth(0).locator('button'), reset=dialog.locator('.settings-data-row').nth(1).locator('button');
     await page.evaluate(()=>window.__cacheFixture.holdClear=true);await clear.click();
     await page.waitForFunction(()=>window.__cacheFixture.pendingClear!==null);
     assert(await clear.isDisabled());assert(await reset.isDisabled());

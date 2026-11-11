@@ -1,6 +1,6 @@
 [package]
 name = "humble-library"
-version = "0.2.4"
+version = "0.3.3"
 description = "Local Humble Bundle library and key exporter"
 authors = ["Nyanma"]
 edition = "2021"

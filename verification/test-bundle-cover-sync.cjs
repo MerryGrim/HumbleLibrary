@@ -4,9 +4,8 @@ const path = require('node:path');
 const crypto = require('node:crypto');
 const { sourceRoot, outputRoot, loadPlaywright, browserLaunchOptions } = require('./test-env.cjs');
 
-// Integration of BOTH production initialization scripts with the real inert
-// browser DOM parser and a synthetic IPC sink. No actual site request, account,
-// browser profile, cookies, product keys or page contents are read.
+// Production bridge integration with banner discovery paused. The retained
+// image helper is installed but must never be called. Network is synthetic.
 const nativeRoot = path.join(sourceRoot, 'src-tauri/src');
 const rustPath = path.join(nativeRoot, 'humble.rs');
 const rustSource = fs.readFileSync(rustPath, 'utf8');
@@ -23,7 +22,7 @@ const anchor = '<a id="logo" href="/software/scifi-game-dev-assets-synty-softwar
 const order = extra => ({ product: { human_name: 'Sci-fi Game Dev Assets Synty', ...extra }, created: '2026-10-25', tpkd_dict: { all_tpks: [] } });
 const report = {
   cases: [], fixtureOnly: true,
-  scope: 'Actual production helper + bridge through synthetic IPC wire DTO in an isolated browser. All network is mocked/aborted. Rust camelCase DTO contract is checked statically; native deserialization is not executed by this JavaScript test.',
+  scope: 'Production bridge with retained image helper deliberately forbidden during sync. All network is mocked/aborted. Rust camelCase DTO contract is checked statically; native deserialization is not executed by this JavaScript test.',
 };
 
 (async () => {
@@ -46,6 +45,7 @@ const report = {
         window.__coverSyncCalls = [];
         window.__coverSyncPayloads = [];
         window.__coverSyncScriptRan = false;
+        window.__coverHelperCalls = 0;
         const ids = orders.map((_, index) => `synthetic_order_${index}`);
         window.fetch = async (value, options = {}) => {
           const url = String(value);
@@ -63,76 +63,49 @@ const report = {
           window.__coverSyncPayloads.push(JSON.parse(JSON.stringify(args.payload)));
         } };
         for (const script of scripts) (0, eval)(script);
+        window.__humbleLibraryBundleImage = async () => { window.__coverHelperCalls += 1; throw new Error("Banner discovery must stay paused"); };
       }, { scripts: names.map(name => sources[name]), html, orders, status, nonce });
     }
     async function sync() {
       return page.evaluate(async nonce => {
         await window.__humbleLibraryRequest({ nonce, operation: 'sync' });
-        return { payload: window.__coverSyncPayloads.at(-1), calls: window.__coverSyncCalls, allPayloads: window.__coverSyncPayloads, scriptRan: window.__coverSyncScriptRan };
+        return { payload: window.__coverSyncPayloads.at(-1), calls: window.__coverSyncCalls, allPayloads: window.__coverSyncPayloads, scriptRan: window.__coverSyncScriptRan, helperCalls: window.__coverHelperCalls };
       }, nonce);
     }
     async function check(name, action) { await action(); report.cases.push({ name, passed: true }); console.log(`PASS ${name}`); }
 
-    await check('Production-declared initialization modules carry the supplied a#logo banner into final sync DTO', async () => {
+    await check('Paused banners add no purchase HTML or image requests during sync', async () => {
       await install(); const result = await sync();
-      assert.equal(result.payload.kind, 'result'); assert.equal(result.payload.ok, true);
-      assert.equal(result.payload.bundles.length, 1); assert.equal(result.payload.bundles[0].imageUrl, banner);
-      assert.deepEqual(result.payload.bundles[0].items, []);
-      assert.deepEqual(result.calls.map(call => call.url), ['/api/v1/user/order', '/api/v1/order/synthetic_order_0?all_tpkds=true', '/downloads?key=synthetic_order_0']);
+      assert.equal(result.payload.ok, true); assert.equal(result.helperCalls, 0);
+      assert.equal(result.payload.bundles[0].imageUrl, '');
+      assert.deepEqual(result.calls.map(call => call.url), ['/api/v1/user/order', '/api/v1/order/synthetic_order_0?all_tpkds=true']);
       assert(result.calls.every(call => call.method === 'GET' && call.credentials === 'same-origin'));
     });
-    await check('HTML entity decoding survives bridge JSON serialization without amp pollution', async () => {
-      await install(); const result = await sync(); const value = result.payload.bundles[0].imageUrl;
-      assert.equal(new URL(value).searchParams.get('s'), 'synthetic');
-      assert.equal(new URL(value).searchParams.has('amp;s'), false);
-      assert.equal(JSON.parse(JSON.stringify(result.payload)).bundles[0].imageUrl, banner);
-    });
-    await check('Purchase banner wins over API icon through the complete helper/bridge path', async () => {
+    await check('Existing image metadata remains in the DTO without loading the image', async () => {
       await install({ orders: [order({ icon })] }); const result = await sync();
-      assert.equal(result.payload.bundles[0].imageUrl, banner); assert.notEqual(result.payload.bundles[0].imageUrl, icon);
+      assert.equal(result.payload.bundles[0].imageUrl, icon); assert.equal(result.helperCalls, 0);
+      assert.equal(result.calls.length, 2);
     });
-    await check('Plain and bundle-specific headers do not trigger global-navigation exclusion', async () => {
-      for (const html of [`<header>${anchor}</header>`, `<header class="bundle-header">${anchor}</header>`, `<div class="purchase-header">${anchor}</div>`]) {
-        await install({ html }); assert.equal((await sync()).payload.bundles[0].imageUrl, banner);
-      }
+    await check('Multiple purchases load only the list and each required order', async () => {
+      await install({ orders: [order({ icon }), order({ logo: banner })] }); const result = await sync();
+      assert.equal(result.payload.bundles.length, 2); assert.equal(result.calls.length, 3);
+      assert.equal(result.helperCalls, 0); assert(!result.calls.some(call => call.url.startsWith('/downloads')));
     });
-    await check('A global navigation homepage logo cannot replace the actual purchase banner', async () => {
-      await install({ html: `<nav><a id="logo" href="/"><img src="https://cdn.example.test/brand.png" alt=""></a></nav><main>${anchor}</main>` });
-      assert.equal((await sync()).payload.bundles[0].imageUrl, banner);
-    });
-    await check('Helper lookup during sync works regardless of initialization registration order', async () => {
-      await install({ reverse: true }); assert.equal((await sync()).payload.bundles[0].imageUrl, banner);
-    });
-    await check('Successful purchase-cover cache retains the URL on a subsequent full sync', async () => {
-      await install(); await sync(); const result = await sync();
-      assert.equal(result.payload.bundles[0].imageUrl, banner);
-      assert.equal(result.calls.filter(call => call.url.startsWith('/downloads?')).length, 1);
+    await check('Repeated syncs and reversed helper registration do not reactivate banners', async () => {
+      await install({ reverse: true }); await sync(); const result = await sync();
+      assert.equal(result.helperCalls, 0); assert.equal(result.calls.length, 4);
       assert.equal(result.allPayloads.filter(payload => payload.kind === 'result').length, 2);
     });
-    await check('A failed purchase HTML read preserves sync success without invented cover or mutation', async () => {
-      await install({ status: 403 }); const result = await sync();
-      assert.equal(result.payload.ok, true); assert.equal(result.payload.bundles[0].imageUrl, '');
-      assert.equal(result.calls.length, 3); assert(result.calls.every(call => call.method === 'GET'));
-    });
-    await check('Final wire imageUrl matches the real Rust serde camelCase Bundle contract', async () => {
+    await check('Final image metadata retains the Rust camelCase DTO contract', async () => {
       assert(/#\[serde\(rename_all\s*=\s*"camelCase"\)\]\s*pub struct Bundle\s*\{[\s\S]*?pub image_url:\s*String/.test(rustSource));
-      await install(); const bundle = (await sync()).payload.bundles[0];
-      assert.equal(Object.hasOwn(bundle, 'imageUrl'), true); assert.equal(Object.hasOwn(bundle, 'image_url'), false);
-      assert.equal(typeof bundle.imageUrl, 'string'); assert.equal(bundle.imageUrl, banner);
+      await install({ orders: [order({ icon })] }); const bundle = (await sync()).payload.bundles[0];
+      assert.equal(bundle.imageUrl, icon); assert.equal(Object.hasOwn(bundle, 'image_url'), false);
     });
-    await check('Downloaded HTML remains inert throughout sync and no image/script network is emitted', async () => {
-      await install({ html: `${anchor}<script>window.__coverSyncScriptRan=true</script><iframe src="https://example.test/unexpected"></iframe>` });
-      const result = await sync(); assert.equal(result.scriptRan, false); assert.equal(result.payload.bundles[0].imageUrl, banner);
-      await page.waitForTimeout(50); assert.deepEqual(unexpectedRequests, []); assert.deepEqual(pageErrors, []);
+    await check('Unused purchase HTML is neither fetched nor evaluated', async () => {
+      await install({ html: anchor + '<script>window.__coverSyncScriptRan=true</script>' }); const result = await sync();
+      assert.equal(result.scriptRan, false); assert.equal(result.helperCalls, 0);
+      assert.deepEqual(unexpectedRequests, []); assert.deepEqual(pageErrors, []);
     });
-
-    // Characterize the potential wrapper issue without weakening exclusions or
-    // assuming an ancestor that the user's supplied fragment did not contain.
-    await install({ html: `<header class="site-header">${anchor}</header>` });
-    report.complementaryFinding = {
-      globalHeaderAncestorExcludesPurchaseAnchor: (await sync()).payload.bundles[0].imageUrl === '',
-      note: 'Plain header/bundle-header/purchase-header are supported. A site-header/global-header/humble-header ancestor excludes its subtree; the supplied fragment alone does not establish whether such an ancestor exists.',
-    };
     report.passed = report.cases.length; report.failed = 0;
     report.sources = Object.fromEntries(Object.entries(sources).map(([name, value]) => [name, crypto.createHash('sha256').update(value).digest('hex')]));
     report.rustDtoSourceSha256 = crypto.createHash('sha256').update(rustSource).digest('hex');

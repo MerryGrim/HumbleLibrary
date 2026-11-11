@@ -12,15 +12,15 @@ const record=name=>f.calls.push(name);
 const subscribe=(name,callback)=>{const listeners=f.listeners[name]??=new Set();listeners.add(callback);return Promise.resolve(()=>listeners.delete(callback));};
 window.__emitAuth=(name,attemptId)=>{for(const callback of f.listeners[name]||[])callback({attemptId});};
 window.__finishLogin=()=>{const pending=f.pendingLogin;f.pendingLogin=null;pending.resolve({attemptId:pending.attemptId});};
-window.__finishSync=()=>{const pending=f.pendingSync.shift();pending.resolve(structuredClone(bundles));};
+window.__finishSync=()=>{const pending=f.pendingSync.shift();pending.resolve({connected:true,authState:'authenticated',bundles:structuredClone(bundles),enumerationComplete:true});};
 export const api={preview:false,
  status:async()=>({connected:false,bundles:[]}),
  login:async()=>{record('login');const attemptId='11111111-1111-4111-8111-'+String(++f.sequence).padStart(12,'0');f.latestAttempt=attemptId;if(f.loginMode==='hold')return await new Promise(resolve=>{f.pendingLogin={attemptId,resolve};});return {attemptId};},
- sync:async()=>{record('sync');if(f.syncMode==='hold')return await new Promise(resolve=>f.pendingSync.push({resolve}));return structuredClone(bundles);},
+ sync:async()=>{record('sync');if(f.syncMode==='hold')return await new Promise(resolve=>f.pendingSync.push({resolve}));return {connected:true,authState:'authenticated',bundles:structuredClone(bundles),enumerationComplete:true};},
  onLoginCompleted:callback=>subscribe('completed',callback),onLoginCancelled:callback=>subscribe('cancelled',callback),
  onSessionStatus:callback=>subscribe('session',callback),
  onLoginClosed:callback=>subscribe('closed',callback),
- onProgress:callback=>subscribe('progress',callback),onWarning:callback=>subscribe('warning',callback),onUpdateProgress:callback=>subscribe('update',callback),
+ onSyncActivity:async()=>()=>{},onProgress:callback=>subscribe('progress',callback),onWarning:callback=>subscribe('warning',callback),onUpdateProgress:callback=>subscribe('update',callback),
  updateStatus:async()=>({enabled:false,repository:'',configured:false,currentVersion:'0.1.0',mode:'portable',supported:true}),
  setNativeLanguage:async()=>{},updateReady:async()=>{},checkUpdates:async()=>({status:'disabled',release:null}),
  logout:async()=>{record('logout');},cancel:async()=>{record('cancel');},copy:async()=>{},

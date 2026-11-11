@@ -1,8 +1,9 @@
 // Purchase-cover discovery. Never executes purchase HTML or exports page contents.
 (() => {
   'use strict';
-  const ORIGIN = 'https://www.humblebundle.com';
-  if (window.top !== window || location.origin !== ORIGIN || typeof window.fetch !== 'function') return;
+  const storefrontOrigins = new Set(['https://www.humblebundle.com', 'https://humblebundle.com']);
+  const ORIGIN = location.origin;
+  if (window.top !== window || !storefrontOrigins.has(ORIGIN) || typeof window.fetch !== 'function') return;
   const nativeFetch = window.fetch.bind(window);
   const cache = new Map();
   const MAX_HTML = 2 * 1024 * 1024;
@@ -81,7 +82,7 @@
         try {
           const target = new URL(logoLink.getAttribute('href') || '', ORIGIN);
           const route = target.pathname.replace(/\/+$/, '') || '/';
-          bundleLink = target.origin === ORIGIN && !target.username && !target.password
+          bundleLink = storefrontOrigins.has(target.origin) && !target.username && !target.password
             && !['/', '/home', '/bundles', '/store', '/membership', '/subscription', '/login', '/logout', '/about'].includes(route)
             && !/^\/home\//.test(route);
         } catch {}
@@ -117,7 +118,11 @@
     try {
       const response = await nativeFetch(`/downloads?key=${encodeURIComponent(id)}`, { method: 'GET', credentials: 'same-origin', cache: 'no-store', signal: controller.signal });
       if (signal?.aborted) throw cancelled();
-      if (!response.ok || response.redirected && new URL(response.url).origin !== ORIGIN) return fallback;
+      if (!response.ok) return fallback;
+      if (response.redirected) {
+        const destination = new URL(response.url);
+        if (!storefrontOrigins.has(destination.origin) || destination.username || destination.password) return fallback;
+      }
       const html = await boundedHtml(response, signal);
       if (signal?.aborted) throw cancelled();
       const found = fromHtml(html, order);

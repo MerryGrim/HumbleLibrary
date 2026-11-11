@@ -45,10 +45,10 @@ check('Every native command definition is registered once in generate_handler', 
   assert.equal(new Set(handlers).size, handlers.length);
   assert.equal(new Set(definitions).size, definitions.length);
   assert.deepEqual(sorted(handlers), sorted(definitions));
-  for (const required of ['humble_status', 'humble_login', 'humble_sync', 'humble_reveal', 'humble_cancel', 'humble_logout', 'humble_bridge_result', 'export_keys', 'copy_text', 'open_external', 'set_ui_language', 'updates_get', 'updates_set', 'updates_check', 'updates_download', 'updates_apply', 'updates_ready']) assert(handlers.includes(required), `Missing required command ${required}`);
+  for (const required of ['humble_status', 'humble_login', 'humble_sync', 'humble_reveal', 'humble_cancel', 'humble_logout', 'humble_clear_cache', 'humble_reset_login', 'humble_reset_all', 'humble_bridge_result', 'export_keys', 'copy_text', 'open_external', 'set_ui_language', 'updates_get', 'updates_set', 'updates_check', 'updates_download', 'updates_apply', 'updates_ready']) assert(handlers.includes(required), `Missing required command ${required}`);
 });
 check('Humble login and logout remain async to avoid Windows WebView2 IPC constructor deadlock', () => {
-  for (const name of ['humble_login', 'humble_logout']) assert(new RegExp(`pub\\s+async\\s+fn\\s+${name}\\s*\\(`).test(texts.humble), `${name} must dispatch its WebView2 constructor off the synchronous IPC thread`);
+  for (const name of ['humble_login', 'humble_logout', 'humble_clear_cache', 'humble_reset_login', 'humble_reset_all']) assert(new RegExp(`pub\\s+async\\s+fn\\s+${name}\\s*\\(`).test(texts.humble), `${name} must dispatch its WebView2 constructor off the synchronous IPC thread`);
 });
 check('AppManifest covers the exact registered native command set', () => {
   assert.equal(new Set(manifest).size, manifest.length);
@@ -69,9 +69,9 @@ check('Main core permissions are a closed set without broad defaults or plugins'
   assert.deepEqual(sorted(main.permissions), sorted([...corePermissions, ...mainCommands.map(permission)]));
   assert(main.permissions.every(value => typeof value === 'string' && !value.includes('*') && !/(?:^|:)default$/.test(value)));
 });
-check('Remote callback capability matches the exact Humble HTTPS origin and account window', () => {
+check('Remote callback capability matches the two exact Humble storefront HTTPS origins and account window', () => {
   assert.deepEqual(remote.windows, ['humble-account']);
-  assert.deepEqual(remote.remote, { urls: ['https://www.humblebundle.com/*'] });
+  assert.deepEqual(remote.remote, { urls: ['https://www.humblebundle.com/*', 'https://humblebundle.com/*'] });
   assert.equal(remote.local, false);
   assert.equal(remote.webviews, undefined);
 });

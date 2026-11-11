@@ -14,14 +14,14 @@ const state=()=>({connected:options.connected??false,authState:options.authState
 window.__emitSession=value=>{for(const callback of f.listeners.session||[])callback(value);};
 window.__emitSessionProgress=()=>{for(const callback of f.listeners.progress||[])callback({completed:13,total:76});};
 window.__resolveSessionStatus=()=>{for(const resolve of f.statusResolvers.splice(0))resolve(state());};
-window.__finishSessionSync=(ok=true)=>{const pending=f.pendingSync;f.pendingSync=null;ok?pending.resolve(structuredClone(bundles)):pending.reject(new Error('Synthetic network or protocol failure'));};
+window.__finishSessionSync=(ok=true)=>{const pending=f.pendingSync;f.pendingSync=null;ok?pending.resolve({connected:true,authState:'authenticated',bundles:structuredClone(bundles),enumerationComplete:true}):pending.reject(new Error('Synthetic network or protocol failure'));};
 window.__completeSessionLogin=()=>{for(const callback of f.listeners.completed||[])callback({attemptId:'11111111-1111-4111-8111-111111111111'});};
 window.__enableSessionListener=()=>{for(const enable of f.sessionListenerResolvers.splice(0))enable();};
 export const api={preview:false,
 status:async()=>options.holdStatus?await new Promise(resolve=>f.statusResolvers.push(resolve)):state(),
 sync:async()=>{f.calls.push('sync');return await new Promise((resolve,reject)=>{f.pendingSync={resolve,reject};});},
 login:async()=>{f.calls.push('login');return{attemptId:'11111111-1111-4111-8111-111111111111'};},
-onSessionStatus:callback=>options.holdSessionListener?new Promise(resolve=>f.sessionListenerResolvers.push(()=>subscribe('session',callback).then(resolve))):subscribe('session',callback),onProgress:callback=>subscribe('progress',callback),onWarning:callback=>subscribe('warning',callback),onLoginCompleted:callback=>subscribe('completed',callback),onLoginCancelled:callback=>subscribe('cancelled',callback),onUpdateProgress:callback=>subscribe('update',callback),
+onSessionStatus:callback=>options.holdSessionListener?new Promise(resolve=>f.sessionListenerResolvers.push(()=>subscribe('session',callback).then(resolve))):subscribe('session',callback),onSyncActivity:async()=>()=>{},onProgress:callback=>subscribe('progress',callback),onWarning:callback=>subscribe('warning',callback),onLoginCompleted:callback=>subscribe('completed',callback),onLoginCancelled:callback=>subscribe('cancelled',callback),onUpdateProgress:callback=>subscribe('update',callback),
 updateStatus:async()=>({enabled:false,configured:false,repository:'',currentVersion:'0.1.3',supported:true}),updateReady:async()=>{},setNativeLanguage:async()=>{},copy:async()=>{},cancel:async()=>{},
 logout:async()=>{f.calls.push('logout');window.__emitSession({connected:false,authState:'unauthenticated'});},
 openExternal:async()=>{throw Error('External navigation forbidden in session fixture');}

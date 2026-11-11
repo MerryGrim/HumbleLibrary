@@ -16,6 +16,8 @@ export interface Bundle {
   imageUrl: string;
   purchasedAt?: string;
   items: KeyItem[];
+  detailsFailed?: boolean;
+  sourceUrl?: string | null;
 }
 
 export interface LibraryStatus {
@@ -23,4 +25,5 @@ export interface LibraryStatus {
   bundles: Bundle[];
   lastSync?: string | null;
   warning?: string | null;
+  enumerationComplete?: boolean;
 }

@@ -17,7 +17,7 @@ const report = { fixtureOnly: true, cases: [], errors: [], scope: 'Actual browse
     const context = await browser.newContext();
     await context.route('**/*', route => {
       const target = new URL(route.request().url());
-      if (target.pathname === '/fixture' && ['www.humblebundle.com', 'example.test'].includes(target.hostname)) return route.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><html><head></head><body></body></html>' });
+      if (target.pathname === '/fixture' && ['www.humblebundle.com', 'humblebundle.com', 'auth.humblebundle.com', 'example.test'].includes(target.hostname)) return route.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><html><head></head><body></body></html>' });
       network.push(route.request().url()); return route.abort();
     });
     const page = await context.newPage();
@@ -31,7 +31,9 @@ const report = { fixtureOnly: true, cases: [], errors: [], scope: 'Actual browse
           window.__imageCalls.push({ url, method: options.method, credentials: options.credentials, cache: options.cache, hasSignal: !!options.signal });
           if (fixture.error) throw new Error('SYNTHETIC-PRIVATE-ERROR');
           if (fixture.awaitAbort) return new Promise((resolve, reject) => options.signal.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')), { once: true }));
-          return new Response(fixture.html || '', { status: fixture.status || 200, headers: { 'content-type': fixture.type || 'text/html; charset=utf-8', ...(fixture.length === undefined ? {} : { 'content-length': String(fixture.length) }) } });
+          const response = new Response(fixture.html || '', { status: fixture.status || 200, headers: { 'content-type': fixture.type || 'text/html; charset=utf-8', ...(fixture.length === undefined ? {} : { 'content-length': String(fixture.length) }) } });
+          if (fixture.redirected) Object.defineProperties(response, { redirected: { value: true }, url: { value: fixture.url } });
+          return response;
         };
         (0, eval)(source);
       }, { source, fixture });
@@ -45,13 +47,37 @@ const report = { fixtureOnly: true, cases: [], errors: [], scope: 'Actual browse
     }
     async function check(name, action) { await action(); report.cases.push({ name, passed: true }); console.log(`PASS ${name}`); }
 
-    await check('Helper initializes only on the exact official HTTPS top-level page', async () => {
-      const other = await context.newPage(); await other.goto('https://example.test/fixture');
-      assert.equal(await other.evaluate(source => { (0, eval)(source); return typeof window.__humbleLibraryBundleImage; }, source), 'undefined'); await other.close();
+    await check('Helper initializes only on exact storefront HTTPS top-level pages', async () => {
+      for (const origin of ['https://example.test', 'https://auth.humblebundle.com', 'http://www.humblebundle.com', 'http://humblebundle.com', 'https://www.humblebundle.com:444', 'https://humblebundle.com:444']) {
+        // A synthetic location avoids Chromium's HSTS upgrade of HTTP test URLs.
+        assert.equal(await page.evaluate(({source,origin}) => {
+          const testWindow={fetch:()=>{throw Error('Unexpected fixture HTTP');}};testWindow.top=testWindow;
+          new Function('window','location',source)(testWindow,{origin});
+          return typeof testWindow.__humbleLibraryBundleImage;
+        },{source,origin}),'undefined');
+      }
       await page.evaluate(() => { const frame = document.createElement('iframe'); frame.srcdoc = '<!doctype html><p>fixture</p>'; document.body.append(frame); });
       const frame = page.frames().find(value => value !== page.mainFrame()); await frame.waitForLoadState();
       assert.equal(await frame.evaluate(source => { (0, eval)(source); return typeof window.__humbleLibraryBundleImage; }, source), 'undefined');
       await page.evaluate(() => document.querySelector('iframe').remove());
+    });
+    await check('Apex storefront uses its own relative cover URLs and accepts canonical bundle links', async () => {
+      await page.goto('https://humblebundle.com/fixture');
+      await install({html:'<a id="logo" href="https://www.humblebundle.com/software/synthetic-bundle"><img src="/safe-purchase-logo.png"></a>'});
+      const result=await image(order());
+      assert.equal(result.image,'https://humblebundle.com/safe-purchase-logo.png');
+      assert.deepEqual(result.calls,[{url:'/downloads?key=order_fixture',method:'GET',credentials:'same-origin',cache:'no-store',hasSignal:true}]);
+      await page.goto('https://www.humblebundle.com/fixture');
+    });
+    await check('Purchase-page redirects stay within the exact storefront origins', async () => {
+      for (const origin of ['https://www.humblebundle.com', 'https://humblebundle.com']) {
+        await install({redirected:true,url:origin+'/downloads?key=order_fixture',html:`<a id="logo" href="${origin}/software/synthetic"><img src="${BANNER}"></a>`});
+        assert.equal((await image(order())).image,BANNER);
+      }
+      for (const origin of ['https://auth.humblebundle.com','https://www.humblebundle.com.evil.invalid','https://humblebundle.com:444','http://humblebundle.com','https://user:password@www.humblebundle.com']) {
+        await install({redirected:true,url:origin+'/downloads?key=order_fixture',html:`<img class="logo" src="${BANNER}">`});
+        assert.equal((await image(order())).image,ICON);
+      }
     });
     await check('Authoritative product logo wins over an icon and skips purchase-page fetching', async () => {
       await install(); const value = order(); value.product.logo = BANNER;
