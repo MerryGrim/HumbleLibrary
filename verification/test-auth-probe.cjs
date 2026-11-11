@@ -32,7 +32,7 @@ function readOnly(env) {
 async function check(name,action){await action();report.checks.push({name,passed:true});console.log(`PASS ${name}`);}
 (async()=>{
   await check('Auth adapter is restricted to the exact official HTTPS origin and top-level frame',async()=>{
-    for(const [origin,top] of [['http://www.humblebundle.com',true],['https://www.humblebundle.com.evil.invalid',true],['https://humblebundle.com',true],['https://www.humblebundle.com',false]]) {
+    for(const [origin,top] of [['http://www.humblebundle.com',true],['https://www.humblebundle.com.evil.invalid',true],['https://humblebundle.com',true],['https://auth.humblebundle.com',true],['https://www.humblebundle.com',false]]) {
       const env=environment(async()=>{throw Error('Unexpected fixture request');},origin,top);
       assert.equal(env.window.__humbleLibraryRequest,undefined);assert.equal(env.requests.length,0);
     }

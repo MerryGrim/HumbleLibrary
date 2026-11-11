@@ -1,2 +1,2 @@
 @echo off
-start "" "%~dp0Releases\0.2.1\HumbleLibrary\HumbleLibrary.exe"
+start "" "%~dp0Releases\0.2.2\HumbleLibrary\HumbleLibrary.exe"

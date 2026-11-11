@@ -7,8 +7,12 @@ use tokio::sync::oneshot;
 
 const LABEL: &str = "humble-account";
 const ORIGIN: &str = "https://www.humblebundle.com";
+// The identity service creates a fresh flow; never retain a flow from a prior login.
+const LOGIN_URL: &str = "https://auth.humblebundle.com/login";
 const BROWSER_ARGS: &str = "--disable-gpu --disable-gpu-compositing";
 const MAX_PAYLOAD: usize = 64 * 1024 * 1024;
+const AUTH_WATCH_INTERVAL: Duration = Duration::from_secs(5);
+const AUTH_WATCH_TIMEOUT: Duration = Duration::from_secs(15 * 60);
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -79,6 +83,10 @@ impl LoginLifecycle {
         let attempt_id = self.current.clone()?; let probe_id = uuid::Uuid::new_v4().to_string();
         self.probing = Some(probe_id.clone()); Some(AuthProbe { attempt_id, probe_id })
     }
+    fn start_probe_for(&mut self, expected_attempt: Option<&str>) -> Option<AuthProbe> {
+        if expected_attempt.is_some_and(|attempt| self.current.as_deref() != Some(attempt)) { return None; }
+        self.start_probe()
+    }
     fn matches(&self, probe: &AuthProbe) -> bool { self.current.as_deref() == Some(probe.attempt_id.as_str()) && self.probing.as_deref() == Some(probe.probe_id.as_str()) }
     fn finish_probe(&mut self, probe: &AuthProbe) { if self.matches(probe) { self.probing = None; } }
     fn complete(&mut self, probe: &AuthProbe) -> bool {
@@ -132,6 +140,15 @@ fn cancel_pending_auth(state: &HumbleState) {
             if let Some(pending) = pending.take() { let _ = pending.sender.send(json!({"ok":false,"reason":"cancelled"})); }
         }
     }
+}
+fn account_navigation(state: &HumbleState, instance: &str, url: &tauri::Url) -> bool {
+    if url.scheme() != "https" || url.host_str().is_none() || !url.username().is_empty() || url.password().is_some() { return false; }
+    if current_window(state, instance) {
+        state.ready.store(false, Ordering::Release);
+        if let Ok(mut login) = state.login.lock() { login.probing = None; }
+        cancel_pending_auth(state);
+    }
+    true
 }
 fn set_auth_state(app: &tauri::AppHandle, state: &HumbleState, auth_state: AuthState) {
     if let Ok(mut library) = state.library.lock() { library.auth_state = auth_state; } else { return; }
@@ -196,7 +213,7 @@ fn ensure_window(app: &tauri::AppHandle, visible: bool) -> Result<WebviewWindow,
         if visible {
             let state = app.state::<HumbleState>();
             state.ready.store(false, Ordering::Release);
-            window.navigate("https://www.humblebundle.com/login?goto=%2Fhome%2Fpurchases".parse().map_err(|_| error("window"))?).map_err(|_| error("window"))?;
+            window.navigate(LOGIN_URL.parse().map_err(|_| error("window"))?).map_err(|_| error("window"))?;
             let _ = window.set_skip_taskbar(false); let _ = window.show(); let _ = window.unminimize(); let _ = window.set_focus();
         }
         return Ok(window);
@@ -208,7 +225,7 @@ fn ensure_window(app: &tauri::AppHandle, visible: bool) -> Result<WebviewWindow,
     let state = app.state::<HumbleState>();
     state.ready.store(false, Ordering::Release);
     *state.window_instance.lock().map_err(|_| error("service"))? = Some(instance.clone());
-    let url = if visible { "https://www.humblebundle.com/login?goto=%2Fhome%2Fpurchases" } else { "https://www.humblebundle.com/home/keys" };
+    let url = if visible { LOGIN_URL } else { "https://www.humblebundle.com/home/keys" };
     let window = WebviewWindowBuilder::new(app, LABEL, WebviewUrl::External(url.parse().map_err(|_| error("window"))?))
         .title(crate::locale::text("login"))
         .inner_size(1000.0, 760.0).min_inner_size(700.0, 540.0)
@@ -220,18 +237,13 @@ fn ensure_window(app: &tauri::AppHandle, visible: bool) -> Result<WebviewWindow,
         // separately and exclusively to the official Humble origin.
         .on_navigation(move |url| {
             let state = handle.state::<HumbleState>();
-            if current_window(&state, &navigation_instance) {
-                state.ready.store(false, Ordering::Release);
-                if let Ok(mut login) = state.login.lock() { login.probing = None; }
-                cancel_pending_auth(&state);
-            }
-            url.scheme() == "https" && url.username().is_empty() && url.password().is_none()
+            account_navigation(&state, &navigation_instance, url)
         })
         .on_page_load(move |window, payload| {
             let state = window.app_handle().state::<HumbleState>();
             if payload.event() == tauri::webview::PageLoadEvent::Finished && official(payload.url()) && current_window(&state, &loaded_instance) {
                 state.ready.store(true, Ordering::Release);
-                schedule_auth_probe(window.app_handle().clone(), window.clone(), loaded_instance.clone());
+                schedule_auth_probe(window.app_handle().clone(), window.clone(), loaded_instance.clone(), None);
             }
         })
         .build().map_err(|_| {
@@ -252,11 +264,30 @@ fn ensure_window(app: &tauri::AppHandle, visible: bool) -> Result<WebviewWindow,
     Ok(window)
 }
 
-fn schedule_auth_probe(app: tauri::AppHandle, window: WebviewWindow, instance: String) {
+fn watch_auth_attempt(app: tauri::AppHandle, window: WebviewWindow, instance: String, attempt_id: String) {
+    // Modern sign-in pages may commit their session without navigating. Observe
+    // only an explicit attempt, using the same read-only proof as a page load.
+    tauri::async_runtime::spawn(async move {
+        let deadline = tokio::time::Instant::now() + AUTH_WATCH_TIMEOUT;
+        loop {
+            tokio::time::sleep(AUTH_WATCH_INTERVAL).await;
+            let state = app.state::<HumbleState>();
+            if tokio::time::Instant::now() >= deadline
+                || !current_window(&state, &instance)
+                || !state.login.lock().ok().is_some_and(|login| login.current.as_deref() == Some(attempt_id.as_str())) { return; }
+            if state.ready.load(Ordering::Acquire) && window.url().ok().is_some_and(|url| official(&url)) {
+                schedule_auth_probe(app.clone(), window.clone(), instance.clone(), Some(&attempt_id));
+            }
+        }
+    });
+}
+
+fn schedule_auth_probe(app: tauri::AppHandle, window: WebviewWindow, instance: String, expected_attempt: Option<&str>) {
+    let is_watcher = expected_attempt.is_some();
     let probe = {
         let state = app.state::<HumbleState>();
         if !current_window(&state, &instance) { return; }
-        let next = state.login.lock().ok().and_then(|mut login| login.start_probe());
+        let next = state.login.lock().ok().and_then(|mut login| login.start_probe_for(expected_attempt));
         next
     };
     let Some(probe) = probe else { return; };
@@ -267,7 +298,19 @@ fn schedule_auth_probe(app: tauri::AppHandle, window: WebviewWindow, instance: S
             if let Ok(mut login) = state.login.lock() { login.finish_probe(&probe); }
             return;
         };
-        let _guard = state.operation.lock().await;
+        // A watcher must never queue behind a long sync/reveal and run later
+        // as a stale poll. A future tick can try again while its attempt lives.
+        let _guard = if is_watcher {
+            match state.operation.try_lock() {
+                Ok(guard) => guard,
+                Err(_) => {
+                    if let Ok(mut login) = state.login.lock() { login.finish_probe(&probe); }
+                    return;
+                }
+            }
+        } else {
+            state.operation.lock().await
+        };
         if !current_window(&state, &instance) || !state.login.lock().ok().is_some_and(|login| login.matches(&probe)) || !window.url().ok().is_some_and(|url| official(&url)) {
             if let Ok(mut login) = state.login.lock() { login.finish_probe(&probe); }
             return;
@@ -360,9 +403,15 @@ pub async fn humble_login(window: WebviewWindow, app: tauri::AppHandle, state: t
     let _operation = crate::app_updates::operation()?;
     let _guard = state.operation.try_lock().map_err(|_| error("busy"))?;
     let attempt = state.login.lock().map_err(|_| error("service"))?.begin();
-    if let Err(message) = ensure_window(&app, true) {
-        if let Ok(mut login) = state.login.lock() { if login.current.as_deref() == Some(attempt.attempt_id.as_str()) { login.cancel(); } }
-        return Err(message);
+    let account = match ensure_window(&app, true) {
+        Ok(account) => account,
+        Err(message) => {
+            if let Ok(mut login) = state.login.lock() { if login.current.as_deref() == Some(attempt.attempt_id.as_str()) { login.cancel(); } }
+            return Err(message);
+        }
+    };
+    if let Some(instance) = state.window_instance.lock().ok().and_then(|instance| instance.clone()) {
+        watch_auth_attempt(app.clone(), account, instance, attempt.attempt_id.clone());
     }
     Ok(attempt)
 }
@@ -499,6 +548,43 @@ mod tests {
     #[test] fn cancelled_or_late_auth_cannot_complete_reopened_login() {
         let mut login=LoginLifecycle::default(); let old=login.begin(); let stale=login.start_probe().unwrap(); assert_eq!(login.cancel().unwrap().attempt_id,old.attempt_id);
         let new=login.begin(); let active=login.start_probe().unwrap(); assert_ne!(old.attempt_id,new.attempt_id); assert!(!login.complete(&stale)); login.finish_probe(&stale); assert!(login.matches(&active)); assert!(login.complete(&active));
+    }
+    #[test] fn auth_watcher_is_bound_to_one_attempt_and_never_queues_parallel_probes() {
+        let mut login = LoginLifecycle::default();
+        let old = login.begin(); let current = login.begin();
+        assert!(login.start_probe_for(Some(&old.attempt_id)).is_none());
+        let first = login.start_probe_for(Some(&current.attempt_id)).unwrap();
+        assert!(login.start_probe_for(Some(&current.attempt_id)).is_none());
+        login.finish_probe(&first);
+        // A failed initial read can be followed by a fresh proof without a
+        // document navigation (e.g. an AJAX login or delayed cookie commit).
+        let later = login.start_probe_for(Some(&current.attempt_id)).unwrap();
+        assert_ne!(first.probe_id, later.probe_id);
+        assert!(!login.complete(&first)); assert!(login.complete(&later));
+        assert!(login.start_probe_for(Some(&current.attempt_id)).is_none());
+        let cancelled = login.begin(); login.cancel();
+        assert!(login.start_probe_for(Some(&cancelled.attempt_id)).is_none());
+    }
+    #[test] fn rejected_account_navigation_preserves_ready_page_and_pending_authentication() {
+        let state = HumbleState::default();
+        *state.window_instance.lock().unwrap() = Some("instance".into());
+        state.ready.store(true, Ordering::Release);
+        let attempt = state.login.lock().unwrap().begin();
+        let probe = state.login.lock().unwrap().start_probe_for(Some(&attempt.attempt_id)).unwrap();
+        let (sender, mut receiver) = oneshot::channel();
+        *state.pending.lock().unwrap() = Some(Pending { nonce: "synthetic".into(), operation: "auth".into(), sender });
+        for url in ["mailto:help@example.test", "about:blank", "http://www.humblebundle.com/", "https://u:p@example.test/"] {
+            assert!(!account_navigation(&state, "instance", &url.parse().unwrap()));
+            assert!(state.ready.load(Ordering::Acquire));
+            assert!(state.login.lock().unwrap().matches(&probe));
+            assert!(state.pending.lock().unwrap().is_some());
+        }
+        assert!(account_navigation(&state, "instance", &"https://identity.example.test/signin".parse().unwrap()));
+        assert!(!state.ready.load(Ordering::Acquire));
+        assert!(!state.login.lock().unwrap().matches(&probe));
+        assert!(state.pending.lock().unwrap().is_none());
+        assert_eq!(receiver.try_recv().unwrap(), json!({"ok":false,"reason":"cancelled"}));
+        assert_eq!(state.login.lock().unwrap().current.as_deref(), Some(attempt.attempt_id.as_str()));
     }
     #[test] fn navigation_invalidates_old_probe_even_in_same_attempt() {
         let mut login=LoginLifecycle::default(); login.begin(); let old=login.start_probe().unwrap(); login.probing=None; let new=login.start_probe().unwrap(); assert_eq!(old.attempt_id,new.attempt_id); assert_ne!(old.probe_id,new.probe_id);

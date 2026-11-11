@@ -10,7 +10,7 @@ An unofficial Windows desktop client for your Humble Bundle library. Browse purc
 
 ## Get started
 
-1. Download **HumbleLibrary-0.2.1-Setup-Windows-x64.exe** from the [latest release](https://github.com/MerryGrim/HumbleLibrary/releases/latest), or extract the portable ZIP to its own folder.
+1. Download **HumbleLibrary-0.2.2-Setup-Windows-x64.exe** from the [latest release](https://github.com/MerryGrim/HumbleLibrary/releases/latest), or extract the portable ZIP to its own folder.
 2. Run the installer or `HumbleLibrary.exe`. The MiraUI installer works for the current Windows user without administrator privileges. A desktop shortcut is optional.
 3. Choose **Sign in to Humble**. A separate window opens the official Humble website. Complete your usual sign-in, including two-factor authentication or CAPTCHA if requested.
 4. After sign-in is confirmed, the window closes and your library refreshes. Closing it early cancels the attempt without reopening the window.
@@ -48,7 +48,7 @@ A reveal request with an uncertain network result is not retried automatically. 
 
 ## Privacy & data
 
-Your Humble session and library data stay on your computer. Sign-in takes place on Humble's official website; the application does not provide a custom password or two-factor-code form. Session files use a dedicated WebView2 profile. The local library cache, including cached keys, is protected with Windows DPAPI for the current Windows user.
+Your Humble session and library data stay on your computer. Sign-in takes place on Humble's official website in a dedicated window, which may navigate to `auth.humblebundle.com` for authentication. Passwords and two-factor codes are entered on that website; the application does not provide its own credential form. Privileged app operations (IPC) are enabled only on `www.humblebundle.com`; the authentication host is not permitted to run library, key or export commands. Session files use a dedicated WebView2 profile. The local library cache, including cached keys, is protected with Windows DPAPI for the current Windows user.
 
 | Edition | Local data location |
 | --- | --- |
