@@ -63,7 +63,7 @@ pub fn run() {
             humble::humble_login, humble::humble_status, humble::humble_sync,
             humble::humble_reveal, humble::humble_logout, humble::humble_bridge_result,
             humble::humble_cancel, export_keys, copy_text, open_external, locale::set_ui_language,
-            humble::humble_clear_cache, humble::humble_reset_login, humble::humble_reset_all,
+            humble::humble_clear_cache, humble::humble_reset_login, humble::humble_reset_all, humble::humble_import_legacy,
             app_updates::updates_get, app_updates::updates_set, app_updates::updates_check,
             app_updates::updates_download, app_updates::updates_apply, app_updates::updates_ready
         ])

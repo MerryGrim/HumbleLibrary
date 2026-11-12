@@ -365,5 +365,13 @@
   "Не удалось полностью очистить данные Humble. Перезапустите приложение и повторите.": "Humble-Daten konnten nicht vollständig gelöscht werden. Starten Sie die Anwendung neu und versuchen Sie es erneut.",
   "Данные Humble очищены. Войдите заново для чистой синхронизации.": "Die Humble-Daten wurden gelöscht. Melden Sie sich für eine neue Synchronisierung erneut an.",
   "Список покупок загружен не полностью. Доступные бандлы сохранены; обновите библиотеку, чтобы продолжить.": "Die Kaufliste ist unvollständig. Verfügbare Bundles wurden gespeichert; aktualisieren Sie die Bibliothek, um fortzufahren.",
-  "Загрузка продолжится через {seconds} сек. · попытка {attempt}": "Der Ladevorgang wird in {seconds} Sek. fortgesetzt · Versuch {attempt}"
+  "Загрузка продолжится через {seconds} сек. · попытка {attempt}": "Der Ladevorgang wird in {seconds} Sek. fortgesetzt · Versuch {attempt}",
+  "Локальная копия": "Lokale Kopie",
+  "Ключи из прежней библиотеки сохранены в исходной покупке. Их можно копировать и экспортировать.": "Schlüssel aus der bisherigen Bibliothek bleiben beim ursprünglichen Kauf. Sie können kopiert und exportiert werden.",
+  "Восстановить сохранённые покупки": "Gespeicherte Käufe wiederherstellen",
+  "Выберите свою локальную копию library.dpapi. Ключи сохранятся в исходных покупках с пометкой «Локальная копия».": "Wähle deine eigene lokale library.dpapi-Sicherung. Schlüssel bleiben bei den ursprünglichen Käufen und werden als „Lokale Kopie“ markiert.",
+  "Выбрать копию": "Sicherung auswählen",
+  "Восстанавливаем покупки…": "Käufe werden wiederhergestellt…",
+  "Сохранённые покупки восстановлены.": "Gespeicherte Käufe wiederhergestellt.",
+  "Не удалось восстановить сохранённые покупки.": "Gespeicherte Käufe konnten nicht wiederhergestellt werden."
 }

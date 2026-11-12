@@ -4,6 +4,7 @@ use std::sync::{atomic::{AtomicBool, Ordering}, Mutex};
 use std::time::Duration;
 use tauri::{Emitter, Manager, WebviewUrl, WebviewWindow, WebviewWindowBuilder, WindowEvent};
 use tokio::sync::oneshot;
+use sha2::{Digest,Sha256};
 
 const LABEL: &str = "humble-account";
 // Humble creates a fresh flow when the official sign-in form is opened.
@@ -25,7 +26,9 @@ pub struct Bundle {
     #[serde(default)] pub items: Vec<KeyItem>,
     #[serde(default)] pub details_failed: bool,
     #[serde(default)] pub source_url: Option<String>,
+    #[serde(default,skip_serializing_if="is_false")] pub recovered:bool,
 }
+fn is_false(value:&bool)->bool{!*value}
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -71,6 +74,7 @@ struct Library {
     enumeration_complete: Option<bool>,
     source_projection:Option<crate::storage::SourceProjection>,
     retained_licenses:Vec<crate::storage::RetainedLicense>,
+    recovered_bundles:Vec<crate::storage::RecoveryPurchase>,
 }
 struct Pending { nonce: String, operation: String, sender: oneshot::Sender<Value>, last_activity: tokio::time::Instant }
 impl Pending { fn new(nonce:String,operation:String,sender:oneshot::Sender<Value>)->Self{Self{nonce,operation,sender,last_activity:tokio::time::Instant::now()}} }
@@ -311,7 +315,10 @@ fn valid_session_proof(operation: &str, payload: &Value) -> bool {
 fn snapshot(state: &HumbleState) -> Result<Status, String> {
     let mut library = state.library.lock().map_err(|_| error("service"))?;
     if !library.loaded {
-        let stored = crate::storage::load_snapshot()?;
+        let stored = match crate::storage::consume_recovery_inbox_at(&crate::storage::root()){
+            Ok(value)=>value,
+            Err(_)=>{library.warning=Some("Не удалось восстановить сохранённые покупки.".into());crate::storage::load_snapshot()?}
+        };
         validate_bundles(&stored.bundles)?;
         if stored.source_projection.is_some(){validate_parent_bundles(&stored.bundles)?}
         library.bundles = stored.bundles;
@@ -320,17 +327,33 @@ fn snapshot(state: &HumbleState) -> Result<Status, String> {
         library.last_sync = stored.last_sync;
         library.source_projection = stored.source_projection;
         library.retained_licenses = stored.retained_licenses;
+        library.recovered_bundles = stored.recovered_bundles;
         library.loaded = true;
     }
     Ok(library_status(&library))
 }
 fn old_modern_projection(library:&Library)->bool{library.account_key.is_some()&&library.source_projection!=Some(crate::storage::SourceProjection::BundlesV1)}
-fn library_status(library:&Library)->Status{let migrating=old_modern_projection(library);Status{connected:library.auth_state==AuthState::Authenticated,auth_state:library.auth_state,last_sync:library.last_sync.clone(),bundles:library.bundles.iter().filter(|bundle|!migrating||bundle.id.starts_with("bundle-")).cloned().collect(),warning:library.warning.clone().or_else(||library_incomplete_warning(library)),enumeration_complete:if migrating{None}else{library.enumeration_complete}}}
+fn library_status(library:&Library)->Status{let migrating=old_modern_projection(library);let mut bundles:Vec<_>=library.bundles.iter().filter(|bundle|!migrating||bundle.id.starts_with("bundle-")).cloned().collect();bundles.extend(recovered_view(&library.recovered_bundles,&bundles));Status{connected:library.auth_state==AuthState::Authenticated,auth_state:library.auth_state,last_sync:library.last_sync.clone(),bundles,warning:library.warning.clone().or_else(||library_incomplete_warning(library)),enumeration_complete:if migrating{None}else{library.enumeration_complete}}}
+pub(crate) fn recovered_view(recovered:&[crate::storage::RecoveryPurchase],modern:&[Bundle])->Vec<Bundle>{
+    let active:std::collections::HashSet<_>=modern.iter().flat_map(|bundle|&bundle.items).filter_map(|item|item.key.as_deref()).collect();
+    let mut groups:Vec<Bundle>=Vec::new();
+    for source in recovered{
+        let original=&source.original_parent;let id=format!("recovered-{:x}",Sha256::digest(original.id.as_bytes()));
+        let index=groups.iter().position(|known|known.id==id).unwrap_or_else(||{let mut value=original.clone();value.id=id.clone();value.items.clear();value.source_url=None;value.details_failed=false;value.recovered=true;groups.push(value);groups.len()-1});
+        let group=&mut groups[index];group.title=original.title.clone();group.image_url=original.image_url.clone();group.purchased_at=original.purchased_at.clone();
+        for item in &original.items{
+            let Some(key)=item.key.as_deref().filter(|key|!active.contains(key))else{continue};
+            let mut value=item.clone();let mut digest=Sha256::new();digest.update(item.id.as_bytes());digest.update([0]);digest.update(key.as_bytes());value.id=format!("recovered-{:x}",digest.finalize());value.status="revealed".into();
+            if let Some(before)=group.items.iter_mut().find(|before|before.id==value.id){*before=value}else{group.items.push(value)}
+        }
+    }
+    groups.retain(|bundle|!bundle.items.is_empty());groups
+}
 fn library_incomplete_warning(library:&Library)->Option<String>{
     if old_modern_projection(library){return Some("Обновите библиотеку, чтобы загрузить покупки из Humble Bundle.".into())}
     if library.enumeration_complete==Some(false)&&(library.account_key.is_some()||!library.bundles.is_empty()){Some("Список покупок загружен не полностью. Доступные бандлы сохранены; обновите библиотеку, чтобы продолжить.".into())}else{partial_details_warning(&library.bundles)}
 }
-fn library_snapshot(library:&Library)->crate::storage::LibrarySnapshot{crate::storage::LibrarySnapshot{bundles:library.bundles.clone(),account_key:library.account_key.clone(),enumeration_complete:library.enumeration_complete,last_sync:library.last_sync.clone(),source_projection:library.source_projection,retained_licenses:library.retained_licenses.clone()}}
+fn library_snapshot(library:&Library)->crate::storage::LibrarySnapshot{crate::storage::LibrarySnapshot{bundles:library.bundles.clone(),account_key:library.account_key.clone(),enumeration_complete:library.enumeration_complete,last_sync:library.last_sync.clone(),source_projection:library.source_projection,retained_licenses:library.retained_licenses.clone(),recovered_bundles:library.recovered_bundles.clone()}}
 
 fn partial_details_warning(bundles: &[Bundle]) -> Option<String> {
     bundles.iter().any(|bundle| bundle.details_failed).then(|| "Не все бандлы удалось обновить. Ранее сохранённые ключи оставлены в библиотеке.".into())
@@ -370,15 +393,17 @@ fn decode_sync_result(reply:&Value)->Result<SyncResult,String>{
     };
     let timestamp=match reply.get("syncedAt"){None|Some(Value::Null)=>None,Some(Value::String(stamp))if stamp.len()<=100&&!stamp.contains('\0')=>Some(stamp.clone()),_=>return Err(error("protocol"))};
     let bundles:Vec<Bundle>=serde_json::from_value(reply.get("bundles").cloned().ok_or_else(||error("protocol"))?).map_err(|_|error("protocol"))?;
+    if bundles.iter().any(|bundle|bundle.recovered){return Err(error("protocol"))}
     let source_projection=account_key.as_ref().map(|_|crate::storage::SourceProjection::BundlesV1);
     if source_projection.is_some(){validate_parent_bundles(&bundles)?}
     Ok(SyncResult{bundles,account_key,enumeration_complete,timestamp,source_projection})
 }
 fn parent_bundle(bundle:&Bundle)->bool{
+    if bundle.recovered{return false}
     let Some(id)=bundle.id.strip_prefix("bundle-").filter(|id|!id.is_empty()&&id.bytes().all(|byte|byte.is_ascii_alphanumeric()||matches!(byte,b'_'|b'-')))else{return false};
     bundle.source_url.as_ref().is_some_and(|value|safe_source_url(value)&&tauri::Url::parse(value).is_ok_and(|url|url.path()==format!("/home/library/{id}")))
 }
-fn validate_parent_bundles(bundles:&[Bundle])->Result<(),String>{validate_bundles(bundles)?;if bundles.iter().all(parent_bundle){Ok(())}else{Err(error("protocol"))}}
+pub(crate) fn validate_parent_bundles(bundles:&[Bundle])->Result<(),String>{validate_bundles(bundles)?;if bundles.iter().all(parent_bundle){Ok(())}else{Err(error("protocol"))}}
 fn retained_licenses(previous:&crate::storage::LibrarySnapshot)->Result<Vec<crate::storage::RetainedLicense>,String>{
     let mut values:std::collections::BTreeSet<_>=previous.retained_licenses.iter().cloned().collect();
     for bundle in &previous.bundles{
@@ -410,7 +435,7 @@ where F:FnOnce(&crate::storage::LibrarySnapshot,Option<&crate::storage::LibraryS
     if result.account_key.is_some()!=grouped{return Err(error("protocol"))}
     if grouped{validate_parent_bundles(&result.bundles)?}
     let same_projection=same_account&&result.source_projection==previous.source_projection;
-    let needs_archive=(!same_account||grouped&&!same_projection)&&(!previous.bundles.is_empty()||!previous.retained_licenses.is_empty());
+    let needs_archive=(!same_account||grouped&&!same_projection)&&(!previous.bundles.is_empty()||!previous.retained_licenses.is_empty()||!previous.recovered_bundles.is_empty());
     let old:Vec<_>=if same_account{previous.bundles.iter().filter(|bundle|!grouped||parent_bundle(bundle)).cloned().collect()}else{Vec::new()};
     let retained_licenses=if same_account&&grouped{retained_licenses(&previous)?}else{Vec::new()};
     let mut bundles=merge_failed_details(result.bundles,&old)?;
@@ -431,13 +456,14 @@ where F:FnOnce(&crate::storage::LibrarySnapshot,Option<&crate::storage::LibraryS
     }
     validate_bundles(&bundles)?;
     let complete=result.enumeration_complete&&!bundles.iter().any(|bundle|bundle.details_failed);
-    let stored=crate::storage::LibrarySnapshot{bundles,account_key:result.account_key,enumeration_complete:Some(result.enumeration_complete),last_sync:if complete{result.timestamp}else if same_account{previous.last_sync.clone()}else{None},source_projection:result.source_projection,retained_licenses};
+    let recovered_bundles=if same_account{previous.recovered_bundles.clone()}else{Vec::new()};
+    let stored=crate::storage::LibrarySnapshot{bundles,account_key:result.account_key,enumeration_complete:Some(result.enumeration_complete),last_sync:if complete{result.timestamp}else if same_account{previous.last_sync.clone()}else{None},source_projection:result.source_projection,retained_licenses,recovered_bundles};
     // Cancellation is checked at the commit boundary, after all validation and
     // merging, while the operation and library mutexes are still held.
     if cancelled.load(Ordering::Acquire){return Err(error("cancelled"))}
     let saved=persist(&stored,needs_archive.then_some(&previous));
     if needs_archive&&saved.is_err(){return Err(error("service"))}
-    library.loaded=true;library.auth_state=AuthState::Authenticated;library.bundles=stored.bundles;library.account_key=stored.account_key;library.enumeration_complete=stored.enumeration_complete;library.last_sync=stored.last_sync;library.source_projection=stored.source_projection;library.retained_licenses=stored.retained_licenses;
+    library.loaded=true;library.auth_state=AuthState::Authenticated;library.bundles=stored.bundles;library.account_key=stored.account_key;library.enumeration_complete=stored.enumeration_complete;library.last_sync=stored.last_sync;library.source_projection=stored.source_projection;library.retained_licenses=stored.retained_licenses;library.recovered_bundles=stored.recovered_bundles;
     library.warning=saved.err().map(|_|"Библиотека обновлена, но сохранить её на диске не удалось.".into());
     Ok(library_status(library))
 }
@@ -484,7 +510,7 @@ fn accept_revealed_item(previous: &KeyItem, mut item: KeyItem) -> Result<KeyItem
     Ok(item)
 }
 
-fn validate_bundles(bundles: &[Bundle]) -> Result<(), String> {
+pub(crate) fn validate_bundles(bundles: &[Bundle]) -> Result<(), String> {
     if bundles.len() > 10000 { return Err(error("protocol")); }
     let mut ids = std::collections::HashSet::new();
     let mut count = 0usize;
@@ -827,6 +853,21 @@ pub async fn humble_sync(window: WebviewWindow, app: tauri::AppHandle, state: ta
         }
     }
     outcome
+}
+
+#[tauri::command]
+pub async fn humble_import_legacy(window:WebviewWindow,state:tauri::State<'_,HumbleState>,allow_unbound:bool)->Result<Option<Status>,String>{
+    main_only(&window)?;if state.maintenance.load(Ordering::Acquire){return Err(error("busy"))}
+    let _updating=crate::app_updates::operation()?;let _guard=state.operation.try_lock().map_err(|_|error("busy"))?;
+    if !maintenance_available(&state){return Err(error("busy"))}
+    snapshot(&state)?;
+    if state.library.lock().map_err(|_|error("service"))?.account_key.is_none(){return Err(error("auth"))}
+    let Some(files)=rfd::AsyncFileDialog::new().set_title(crate::locale::text("recover")).add_filter("DPAPI",&["dpapi"]).pick_files().await else{return Ok(None)};
+    let paths:Vec<_>=files.iter().map(|file|file.path().to_path_buf()).collect();let folder=crate::storage::root();
+    crate::storage::prepare_recovery_inbox_at(&folder,&paths,allow_unbound).map_err(|_|"Не удалось восстановить сохранённые покупки.")?;
+    let stored=crate::storage::consume_recovery_inbox_at(&folder).map_err(|_|"Не удалось восстановить сохранённые покупки.")?;
+    let mut library=state.library.lock().map_err(|_|error("service"))?;library.bundles=stored.bundles;library.account_key=stored.account_key;library.enumeration_complete=stored.enumeration_complete;library.last_sync=stored.last_sync;library.source_projection=stored.source_projection;library.retained_licenses=stored.retained_licenses;library.recovered_bundles=stored.recovered_bundles;library.warning=None;
+    Ok(Some(library_status(&library)))
 }
 
 #[tauri::command]
@@ -1236,7 +1277,7 @@ mod tests {
     #[test] fn old_window_instance_cannot_match_new_window() {
         let state=HumbleState::default(); *state.window_instance.lock().unwrap()=Some("new-instance".into()); assert!(!current_window(&state,"old-instance")); assert!(current_window(&state,"new-instance"));
     }
-    fn bundle() -> Bundle { Bundle { id: "order_fixture_1".into(), title: "Mixed bundle".into(), image_url: "https://cdn.humblebundle.com/cover.png".into(), purchased_at: None, items: vec![KeyItem { id: "a:0:steam".into(), title: "Game".into(), platform: "Steam".into(), key: Some("TEST-ONLY-KEY".into()), status: "revealed".into(), instructions: None, redeem_url: None }], details_failed:false,source_url:None } }
+    fn bundle() -> Bundle { Bundle { id: "order_fixture_1".into(), title: "Mixed bundle".into(), image_url: "https://cdn.humblebundle.com/cover.png".into(), purchased_at: None, items: vec![KeyItem { id: "a:0:steam".into(), title: "Game".into(), platform: "Steam".into(), key: Some("TEST-ONLY-KEY".into()), status: "revealed".into(), instructions: None, redeem_url: None }], details_failed:false,source_url:None,recovered:false } }
     fn failed_bundle(id: &str) -> Bundle {
         let mut value=bundle(); value.id=id.into(); value.title="Synthetic missing detail".into(); value.items.clear(); value.details_failed=true;
         value.source_url=Some(format!("https://www.humblebundle.com/home/library/{id}")); value
@@ -1414,6 +1455,16 @@ mod tests {
         let mut library=Library{loaded:true,account_key:Some("b".repeat(64)),source_projection:Some(crate::storage::SourceProjection::BundlesV1),retained_licenses:vec![crate::storage::RetainedLicense{id:"shared-entitlement".into(),key:"TEST-ONLY-OTHER-ACCOUNT".into(),parent_id:Some("bundle-parent".into())}],..Library::default()};
         let mut fresh=grouped_fixture("parent");fresh.items[0].id="shared-entitlement".into();fresh.items[0].key=None;fresh.items[0].status="hidden".into();
         let status=apply_sync_result(&mut library,grouped_result(vec![fresh],true),&AtomicBool::new(false),|_,archive|{assert_eq!(archive.unwrap().retained_licenses.len(),1);Ok(())}).unwrap();assert!(status.bundles[0].items[0].key.is_none());assert!(library.retained_licenses.is_empty());
+    }
+    #[test] fn recovered_original_purchases_survive_same_account_sync_and_stay_out_of_foreign_accounts(){
+        let mut original=bundle();original.items[0].key=Some("TEST-ONLY-RECOVERED-EXACT".into());
+        let recovered=crate::storage::RecoveryPurchase{source_hash:"c".repeat(64),source_account_key:None,original_parent:original};
+        let mut library=Library{loaded:true,bundles:vec![grouped_fixture("parent")],account_key:Some("a".repeat(64)),source_projection:Some(crate::storage::SourceProjection::BundlesV1),recovered_bundles:vec![recovered],..Library::default()};
+        let status=apply_sync_result(&mut library,grouped_result(vec![grouped_fixture("parent")],true),&AtomicBool::new(false),|_,_|Ok(())).unwrap();
+        assert_eq!(status.bundles.len(),2);assert_eq!(library.bundles.len(),1);assert_eq!(library.recovered_bundles.len(),1);assert!(status.bundles[1].recovered);assert_eq!(status.bundles[1].items[0].key.as_deref(),Some("TEST-ONLY-RECOVERED-EXACT"));
+        let mut available=grouped_fixture("parent");available.items[0].key=Some("TEST-ONLY-RECOVERED-EXACT".into());let visible=library_status(&Library{bundles:vec![available],recovered_bundles:library.recovered_bundles.clone(),..Library::default()});assert_eq!(visible.bundles.len(),1);
+        let mut foreign=grouped_result(vec![grouped_fixture("parent")],true);foreign.account_key=Some("b".repeat(64));
+        let status=apply_sync_result(&mut library,foreign,&AtomicBool::new(false),|_,archive|{assert_eq!(archive.unwrap().recovered_bundles.len(),1);Ok(())}).unwrap();assert_eq!(status.bundles.len(),1);assert!(library.recovered_bundles.is_empty());
     }
     #[test] fn modern_projection_requires_authoritative_index_and_exact_parent_routes(){
         let good=json!({"sourceProtocol":"modern","sourceProjection":"bundles-v1","parentIndexComplete":true,"accountKey":"a".repeat(64),"enumerationComplete":true,"bundles":[grouped_fixture("parent")]});assert!(decode_sync_result(&good).is_ok());

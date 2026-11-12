@@ -23,7 +23,7 @@ Requires **Windows 10 version 2004 (build 19041) or later, x64, and Microsoft Ed
 
 ## What it does
 
-- A single library based on Humble's Bundles collection: one tile per bundle, with its keys and downloads inside. The separate Purchased product list is not turned into bundle tiles. Covers currently use placeholders while banner loading is paused.
+- A single library based on Humble's Bundles collection: one tile per bundle, with its keys and downloads inside. The separate current Choice purchase is also included when Humble supplies its explicit container. The separate Purchased product list is not turned into bundle tiles. Covers currently use placeholders while banner loading is paused.
 - Search and persistent sorting by purchase date or title. Newest purchases appear first by default.
 - Every key platform returned by Humble, not only Epic/Fab.
 - Reveal one key or a bundle, copy individual keys, or export a selection.
@@ -31,6 +31,7 @@ Requires **Windows 10 version 2004 (build 19041) or later, x64, and Microsoft Ed
 - Separate official sign-in window with user-controlled 2FA/CAPTCHA.
 - Unavailable purchase details are marked separately while the rest of the library updates; previously cached keys for that purchase remain available.
 - Sequential bundle reads with bounded retries and cancellation. Incomplete bundle details are explicitly marked and retain matching cached keys from the same account.
+- Recovery of your encrypted legacy library copies. Missing known keys appear in their original saved purchases, marked **Local copy**, with copy and export available.
 - Separate browser-cache cleanup, sign-in reset and full local Humble data reset. A full reset clears the local library and keys, browser cache and sign-in session before a fresh login.
 - Light and dark themes, keyboard navigation and dismissible notifications with a copy-text action.
 - Nine languages in both the app and installer: **Русский, English, Deutsch, Italiano, Español, Français, 简体中文, 日本語, 한국어**. System-language selection is also available.
@@ -68,7 +69,9 @@ Uninstalling preserves local user data. Updates preserve the library, session an
 
 Synchronization keeps an encrypted completeness marker and the time of the last complete refresh. Before replacing a nonempty library whose account binding is unknown or different, the app preserves an encrypted local archive. Account libraries are never merged across different bindings. **Clear all Humble data** also removes these app-owned archives; exported files remain where you saved them.
 
-An older cache may contain individual products shown incorrectly as bundles. Migration hides those old tiles while preserving previously saved values in encrypted local storage. New bundle details can restore retained keys only by an exact, unambiguous parent-bundle and entitlement-ID match for the same account. Values without a verified parent remain private rather than being attached to another bundle.
+An older cache may contain individual products shown incorrectly as bundles. Migration hides those old tiles while preserving previously saved values in encrypted local storage. New bundle details can restore retained keys only by an exact, unambiguous parent-bundle and entitlement-ID match for the same account. Values without a verified parent remain private rather than being attached to another bundle. To make older saved values accessible, Settings → **Restore saved purchases** lets you select your own DPAPI library backups. This preserves their original purchase groups and metadata without assigning them to a new Humble UUID by title. Different snapshots of the same original purchase produce one local tile; distinct key values remain available. A value already displayed by a current bundle is omitted from the local-copy view. Recovery requires the current account library; differently bound backups are rejected. Legacy copies without account metadata are imported only through this explicit local recovery action.
+
+Восстановление старых локальных копий доступно в настройках. Сохранённые ключи остаются в исходных покупках с пометкой **«Локальная копия»**; их можно копировать и экспортировать.
 
 Settings also provides **Clear website cache** and **Reset Humble sign-in**. Clearing the cache refreshes temporary website and cover files without signing you out. Resetting sign-in clears Humble's dedicated browser profile and requires a new sign-in, while keeping your saved bundles, keys and application preferences. Close an active sign-in window or finish the current operation before using these actions.
 

@@ -1,12 +1,12 @@
 # Synchronization contract
 
-The library represents Humble's **Bundles** collection. A tile is a purchased bundle; its contents are keys and downloads. A content row from the website's separate **Purchased** tab is not a bundle.
+Modern synchronization represents Humble's **Bundles** collection and any explicitly linked current Choice purchase. A tile is a purchase container; its contents are keys and downloads. A content row from the website's separate **Purchased** tab is not a bundle.
 
 Authentication and reveal/export remain separate from synchronization. Synchronization reads documents only. It does not reveal keys, redeem entitlements, sign downloads, submit purchases or retry a reveal.
 
 ## Authoritative grouping
 
-The canonical `/home/library` document supplies `UserLibrary.bundleItems`. This is the official Bundles-tab index and the sole source of modern parent tiles. Each parent keeps its supplied title and opens this exact route:
+The canonical `/home/library` document supplies `UserLibrary.bundleItems`. This is the official Bundles-tab index. Each indexed parent keeps its supplied title and opens this exact route:
 
 ```js
 `/home/library/${item.productEntitlementId ?? item.id}`
@@ -16,13 +16,15 @@ The index's `entitlements` are shallow wrappers, not a list of the bundle's prod
 
 Index parsing consumes only the canonical route ID, title and an optional explicit purchase date. The canonical ID is `productEntitlementId ?? id`; an unused fallback ID does not override a valid product-entitlement ID. Wrapper entitlements, `itemType`, `collection` and unrelated references are not decoded or validated. Aliases for the same canonical route produce one parent destination, never separate product tiles. Malformed lists, route IDs or titles still reject the index.
 
+The same `UserLibrary` component separately passes `subscriptionEntitlement` to its Choice carousel. The carousel links directly to `/home/library/${subscriptionEntitlement.id}`. When this optional container is present, the adapter consumes only its validated ID and reads that exact parent route. It deduplicates an alias already present in `bundleItems`. A single unambiguous detail heading supplies its title; absent or conflicting child headings use the neutral name **Humble Choice**. Every returned key/download section remains inside that purchase.
+
 Do not create parent tiles from `filterUserLibrary` results, content routes, entitlement groups or Vault entries. Do not infer parents from titles, product names, a shared `collection` value or an assumed relationship between similarly named IDs. Synchronization does not enumerate the Purchased tab or discover its filter action. A deployment's server-action IDs are not needed for this read path.
 
 A missing purchase date stays missing unless a valid date is supplied by the detail response or a matching cached bundle. The adapter does not derive dates from titles or substitute the current time.
 
 ## One job
 
-1. Read a fresh canonical `/home/library` document. Passively parse its authenticated provider and Bundles index.
+1. Read a fresh canonical `/home/library` document. Passively parse its authenticated provider, Bundles index and optional current Choice purchase-container ID.
 2. Validate and plan one canonical detail destination for each indexed bundle. Keep the parent identity, title and source route together.
 3. Read each bundle destination sequentially. Verify the same authenticated account and normalize all returned key/download sections into that parent. An unavailable detail becomes an explicitly incomplete bundle, rather than an empty or separate product tile.
 4. Recheck the authenticated account after the last read.
@@ -61,11 +63,23 @@ The following references identify the saved official client build used for the a
 | `0vu0ik72wero9.js` | around 517606, `UserLibraryRow` | Purchased rows have independent content/group/gift navigation. They are not the Bundles index. |
 | `3lb8lkf8oktuz.js` | around 12100, `UserLibraryRowLayout` | A content-row `id` defaults to `/home/library/content/${id}`; this differs from the bundle route. |
 | `2mavdnry8mv01.js` | around 21333, `ProductKeysDownloads` | The detail component consumes `userLibraryItem`, renders its title, and reads its `entitlements.keys`, `entitlements.downloads` and redemption groups. `productEntitlementId` supplies optional bulk-download context. |
+| `0vu0ik72wero9.js` | around 530295, `subscriptionEntitlement:r??null` | `UserLibrary` supplies the separate current Choice entitlement to `ChoiceGamesMarketingCarousel`. |
+| `0zt0-o49yzi9d.js` | around 21100, `ChoiceMediaCarousel` / `S=d?` | The current Choice redemption destination is `/home/library/${subscriptionEntitlement.id}`. |
 
 The saved root rows have only shallow entitlement wrappers. In the separately saved opened-bundle DOM, the same parent title heads many rendered content rows. This establishes why root wrappers and Purchased rows cannot substitute for reading the bundle's detail document. No saved client code establishes a universal Purchased-to-parent join through `collection` or `productEntitlementId`.
+
+The Bundles index is not evidence that every historical Choice month, storefront purchase or old order has been enumerated. Purchased rows explicitly include Choice-specific display behavior (`subscriptioncontent` and `choiceDate`, around offset 518274 in `0vu0ik72wero9.js`), but their normal navigation is a content route; only the gifted branch uses `productEntitlementId` as a parent destination. The saved code does not establish a universal historical Purchased-to-order mapping. Original local purchase groups therefore remain the provenance for recovered legacy values; matching names, dates or an entitlement ID alone must not relocate them into a modern parent. The optional current Choice link adds only that explicit container and does not resolve historical coverage.
 
 ## Verification boundary
 
 Saved HTML and first-party scripts are inspected as inert data. They are never mounted, bootstrapped or allowed to make network requests. The opened-bundle HTML was saved after client navigation: its rendered DOM is the bundle detail, but its inline Flight stream still contains the earlier library root. It therefore cannot serve as a complete fixture for the detail DTO or prove a particular live account's contents.
 
 Synthetic parser, coordinator, browser and native fixtures verify grouping, all-section aggregation, retries, cancellation, migration and persistence. They do not establish successful synchronization of a real Humble account. Earlier HTTP 200 failures do not by themselves prove a rate limit. The corrective contract is the official Bundles index plus bundle details; pacing does not repair an incorrect parent/content model.
+
+## Explicit legacy recovery
+
+An encrypted recovery inbox is separate from the active cache, so older installed versions can ignore a prepared recovery until the application update. Import is a local action on user-selected DPAPI library copies. The target account must match the current grouped library; differently bound sources are rejected. An unbound old copy requires the explicit recovery action. No account ownership is inferred from matching names or keys.
+
+Each private recovery record keeps the source ciphertext digest, original source-account marker and full original parent bundle and items. Import order determines metadata precedence; source versions and different key values remain protected. Consumption archives the active snapshot and commits the recovered records atomically before removing the inbox. A repeated inbox is idempotent, and full data reset removes both the recovered records and pending inbox.
+
+The frontend receives a local-copy view grouped by exact original purchase identity. It preserves every original parent membership and distinct (item ID, code bytes) pair while suppressing keys already visible in current modern bundles. Local-copy records support copy/export only and never submit reveal requests or become guessed modern bundle members. Sync retains recovery for the same account; changing accounts archives it and removes it from the visible library.

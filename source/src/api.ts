@@ -82,6 +82,10 @@ export const api = {
   async cancel():Promise<void> { if(!preview) await invoke('humble_cancel'); },
   async logout():Promise<void> { if(preview){ previewConnected=false; previewLibraryRetained=false; return; } return invoke('humble_logout'); },
   async clearCache():Promise<void> { if(preview) return; return invoke('humble_clear_cache'); },
+  async importLegacy():Promise<LibraryStatus|null> {
+    if(!isTauri()) return null;
+    return invoke('humble_import_legacy',{allowUnbound:true});
+  },
   async resetLogin():Promise<void> { if(preview){ previewConnected=false; return; } return invoke('humble_reset_login'); },
   async resetAll():Promise<LibraryStatus> {
     if(preview){ previewConnected=false; previewLibraryRetained=false; previewReset=true; try { localStorage.setItem(previewResetKey,'1'); } catch { /* Demo persistence is optional. */ } return {connected:false,authState:'unauthenticated',lastSync:null,bundles:[]}; }

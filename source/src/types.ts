@@ -18,6 +18,7 @@ export interface Bundle {
   items: KeyItem[];
   detailsFailed?: boolean;
   sourceUrl?: string | null;
+  recovered?: boolean;
 }
 
 export interface LibraryStatus {

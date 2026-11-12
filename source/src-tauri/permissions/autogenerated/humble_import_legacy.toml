@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-humble-import-legacy"
+description = "Enables the humble_import_legacy command without any pre-configured scope."
+commands.allow = ["humble_import_legacy"]
+
+[[permission]]
+identifier = "deny-humble-import-legacy"
+description = "Denies the humble_import_legacy command without any pre-configured scope."
+commands.deny = ["humble_import_legacy"]

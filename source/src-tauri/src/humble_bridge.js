@@ -294,6 +294,13 @@
           sources.set(route.path, { read: true, route, item: { ...item,
             purchasedAt: purchaseMetadata(previous?.item.purchasedAt) || purchaseMetadata(item.purchasedAt) } });
         }
+        const choice = root.library.subscriptionEntitlement;
+        if (choice) {
+          const route = bundleRoute(choice);
+          if (!sources.has(route.path)) sources.set(route.path, {
+            read: true, route, choice: true, item: { id: choice.id, title: 'Humble Choice' },
+          });
+        }
         totalDetails = sources.size;
         return [...sources.values()];
       },
@@ -305,6 +312,12 @@
         context.phase = 'detailSchema';
         const detail = decodeModernDetail(html, context);
         if (detail.accountIdentity !== identity) throw new Error('auth');
+        if (source.choice) {
+          const titles = [...new Set(detail.parts.map(part => text(part.userLibraryItem.title, 1000).trim()).filter(Boolean))];
+          // ProductKeysDownloads renders these titles as h1. Several different
+          // child headings do not establish a single purchase-container name.
+          if (titles.length === 1) base.title = titles[0];
+        }
         context.phase = 'keySchema';
         const { items } = normalizeDetail(detail, path, base.title);
         completedDetails++; context.completedDetails = completedDetails;

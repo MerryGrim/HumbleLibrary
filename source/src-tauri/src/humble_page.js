@@ -235,6 +235,17 @@
       // Vault props are unrelated to it and must not become purchase tiles or
       // block this projection when those unconsumed props change shape.
     };
+    // The official Choice carousel has a separate current purchase-container
+    // link: /home/library/{subscriptionEntitlement.id}. It is not a product row.
+    if (own(props, 'subscriptionEntitlement')) {
+      const choice = page.unwrap(props.subscriptionEntitlement);
+      if (choice !== undefined && choice !== null && choice !== '$undefined') {
+        if (!record(choice) || !own(choice, 'id')) fail('libraryEntry');
+        const id = page.project(choice.id);
+        if (!validId(id)) fail('libraryEntry');
+        result.subscriptionEntitlement = { id };
+      }
+    }
     // Kept only inside the adapter to bind read responses to one account.
     // This value must not enter DTOs, diagnostics or the application UI.
     Object.defineProperty(result, 'accountIdentity', { value: identity });

@@ -79,7 +79,16 @@ const report = { fixtureOnly: true, projection: 'bundles-v1', noLiveAccount: tru
         bundleItems = [...parents, { id: 'standalone-purchase', title: 'Synthetic standalone purchase', type: 'game' }];
         detailPages['/home/library/standalone-purchase'] = pageHtml('ProductKeysDownloads', [{ userLibraryItem: { entitlements: { keys: [key('standalone-steam', 'steam'), key('standalone-gog', 'gog')] } } }]);
       }
-      let html = rootHtml(bundleItems);
+      const rootExtra = {};
+      if (config.choice) {
+        rootExtra.subscriptionEntitlement = { id: config.choiceAlias ? 'bundle-a' : 'current-choice', title: 'SYNTHETIC_PRIVATE_IGNORED_CHOICE_TITLE', entitlements: '$Lunsupported' };
+        const parts = [{ userLibraryItem: { ...(config.choiceFallback ? {} : { title: 'Synthetic Official Choice Month' }), entitlements: {
+          keys: [key('current-choice-key', 'steam', { redemptionData: { keyFormatted: 'SYNTHETIC-CHOICE-CODE' } })], downloads: [{ id: 'choice-download', type: 'software' }],
+        } } }];
+        if (config.choiceTitleConflict) parts.push({ userLibraryItem: { title: 'Synthetic Other Child Heading', entitlements: {} } });
+        detailPages['/home/library/current-choice'] = pageHtml('ProductKeysDownloads', parts, config.choiceOtherAccount ? otherUser : user, true);
+      }
+      let html = rootHtml(bundleItems, user, rootExtra);
       if (config.anonymousRoot) html = rootHtml(bundleItems, null);
       if (config.missingIdentity) html = rootHtml(bundleItems, { email: user.email });
       if (config.badRoot === 'bundleContainer') html = rootHtml({}, user);
@@ -201,6 +210,29 @@ const report = { fixtureOnly: true, projection: 'bundles-v1', noLiveAccount: tru
       const result = await run({ standalone: true }), value = complete(result, 3); const item = value.bundles.find(bundle => bundle.id === 'bundle-standalone-purchase');
       assert(item); assert.equal(item.items.length, 2); assert.deepEqual(item.items.map(key => key.platform), ['Steam', 'GOG']);
       assert(result.requests.some(request => request.route === '/home/library/standalone-purchase')); assert(!result.requests.some(request => request.route.includes('/content/')));
+    });
+    await check('The explicit current Choice parent adds one authenticated container with every platform and its official detail heading', async () => {
+      const result = await run({ choice: true }), value = complete(result, 3), choice = value.bundles[2];
+      assert.equal(choice.id, 'bundle-current-choice'); assert.equal(choice.title, 'Synthetic Official Choice Month');
+      assert.equal(choice.sourceUrl, 'https://www.humblebundle.com/home/library/current-choice');
+      assert.deepEqual(choice.items.map(item => item.id), ['current-choice-key', 'choice-download']);
+      assert.deepEqual(value.bundles.slice(0, 2).map(bundle => bundle.items.length), [5, 4]);
+      assert.equal(codes(value).length, 5);
+      assert.deepEqual(result.requests.map(request => request.route), ['/home/library', '/home/library/bundle-a', '/home/library/bundle-b', '/home/library/current-choice', '/home/library']);
+      const onlyChoice = await run({ empty: true, choice: true });
+      assert.deepEqual(codes(complete(onlyChoice, 1)), ['SYNTHETIC-CHOICE-CODE']);
+      assert.deepEqual(onlyChoice.requests.map(request => request.route), ['/home/library', '/home/library/current-choice', '/home/library']);
+    });
+    await check('Choice aliases do not duplicate an indexed bundle and unknown or conflicting headings use the neutral parent name', async () => {
+      const aliases = await run({ choice: true, choiceAlias: true }), value = complete(aliases);
+      assert.equal(aliases.requests.filter(request => request.route === '/home/library/bundle-a').length, 1);
+      assert.equal(aliases.requests.some(request => request.route === '/home/library/current-choice'), false);
+      assert.equal(value.bundles[0].title, parents[0].title);
+      for (const config of [{ choiceFallback: true }, { choiceTitleConflict: true }]) {
+        const choice = complete(await run({ empty: true, choice: true, ...config }), 1).bundles[0];
+        assert.equal(choice.title, 'Humble Choice'); assert.equal(choice.items.length, 2);
+      }
+      fatal(await run({ choice: true, choiceOtherAccount: true }), 'auth');
     });
     await check('The same product or entitlement ID in separate purchased parents is never globally deduplicated', async () => {
       const value = complete(await run()); const shared = value.bundles.map(bundle => bundle.items.find(item => item.id === 'shared-license'));

@@ -5,7 +5,7 @@ const translations = {
     headline: 'Every bundle.<br>Every key.<br><span>All in reach.</span>',
     intro: 'A comfortable home for your Humble Bundle library. Find your purchases, reveal your keys and keep them handy — without juggling tabs.',
     compatibility: 'Updated for Humble Bundle’s redesigned sign-in and library.',
-    download: 'Download for Windows', allVersions: 'All downloads <span aria-hidden="true">↗</span>', requirements: 'Free · Windows 10/11 x64 · v0.3.3',
+    download: 'Download for Windows', allVersions: 'All downloads <span aria-hidden="true">↗</span>', requirements: 'Free · Windows 10/11 x64 · v0.3.4',
     metaSource: 'Open source', metaLocal: 'Stored locally', library: 'Library', demoCount: '4 bundles · 70 items', connected: 'Connected', search: 'Search bundles', newFirst: 'Newest first ↓',
     keys18: '18 items', keys24: '24 items', keys12: '12 items', keys16: '16 items', back: 'All bundles', exampleItems: 'An example key list',
     item1: 'Typography collection', software: 'Software', item2: '3D asset collection', item3: 'Sound library', audio: 'Audio',

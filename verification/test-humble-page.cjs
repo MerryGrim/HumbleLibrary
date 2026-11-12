@@ -54,6 +54,22 @@ const report = { fixtureOnly: true, sourcePath, sourceSha256: crypto.createHash(
     await check('An authenticated empty bundle collection does not claim to enumerate the Purchased or Vault collections', async () => {
       const result = await call('decodeLibraryHtml', html({ items: [] })); assert(result.ok); assert.deepEqual(result.value.bundleItems, []); assert.deepEqual(Object.keys(result.value).sort(), ['authenticated', 'bundleItems']);
     });
+    await check('The separate current Choice parent consumes only its exact id and never root wrapper metadata', async () => {
+      const id = 'SYNTHETIC_CURRENT_CHOICE';
+      for (const subscriptionEntitlement of [{ id, title: '$Lunsupported', entitlements: '$Lunsupported', productEntitlementId: '$Lunsupported', userId: user.id }, '$a']) {
+        const fixture = html({ items: [], libraryProps: { subscriptionEntitlement }, extra: row('a', { id: '$b', ignored: '$Lunsupported' }) + row('b', id) });
+        const result = await call('decodeLibraryHtml', fixture); assert.equal(result.ok, true);
+        assert.deepEqual(result.value, { authenticated: true, bundleItems: [], subscriptionEntitlement: { id } });
+        assert.equal(JSON.stringify(result).includes(user.id), false); assert.equal(JSON.stringify(result).includes('$Lunsupported'), false);
+      }
+      for (const subscriptionEntitlement of [undefined, null, '$undefined']) {
+        const result = await call('decodeLibraryHtml', html({ libraryProps: { subscriptionEntitlement } }));
+        assert.equal(result.ok, true); assert.equal(Object.hasOwn(result.value, 'subscriptionEntitlement'), false);
+      }
+      for (const subscriptionEntitlement of [7, [], {}, { id: null }, { id: '' }, { id: '../bad' }, { id: 'x'.repeat(257) }]) {
+        assert.equal((await call('decodeLibraryHtml', html({ libraryProps: { subscriptionEntitlement } }))).ok, false);
+      }
+    });
     await check('Account membership is available inside the adapter and excluded from serialized page projections', async () => {
       const result = await page.evaluate(({ library, detail, identity }) => {
         const left = window.__syntheticPageApi.decodeLibraryHtml(library);

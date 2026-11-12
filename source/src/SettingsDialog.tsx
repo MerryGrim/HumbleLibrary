@@ -29,16 +29,17 @@ interface Props {
   onClearCache: () => Promise<void>;
   onResetLogin: () => Promise<void>;
   onResetAll: () => Promise<void>;
+  onImportLegacy: () => Promise<boolean>;
 }
 
-export default function SettingsDialog({ update, appBusy, fullResetBlocked, onClose, onAutoCheck, onRepositorySave, onCheck, onInstall, onOpenRelease, onDismissMessage, onClearCache, onResetLogin, onResetAll }: Props) {
+export default function SettingsDialog({ update, appBusy, fullResetBlocked, onClose, onAutoCheck, onRepositorySave, onCheck, onInstall, onOpenRelease, onDismissMessage, onClearCache, onResetLogin, onResetAll, onImportLegacy }: Props) {
   const { language, setLanguage } = useLanguage();
   const dialog = useRef<HTMLDivElement>(null);
   const [repository, setRepository] = useState(update.source);
   const [saving, setSaving] = useState(false);
   const [repositoryError, setRepositoryError] = useState(false);
   const [confirmReset, setConfirmReset] = useState<'login' | 'all' | null>(null);
-  const [maintenance, setMaintenance] = useState<'cache' | 'login' | 'all' | null>(null);
+  const [maintenance, setMaintenance] = useState<'cache' | 'login' | 'all' | 'recovery' | null>(null);
   const [maintenanceMessage, setMaintenanceMessage] = useState<{ text: string; kind: 'success' | 'error' } | null>(null);
   const maintenanceLock = useRef(false);
   const resetButton = useRef<HTMLButtonElement>(null);
@@ -61,6 +62,15 @@ export default function SettingsDialog({ update, appBusy, fullResetBlocked, onCl
       if (kind !== 'cache') setConfirmReset(null);
     } catch (caught) {
       setMaintenanceMessage({ text: typeof caught === 'string' ? caught : caught instanceof Error ? caught.message : kind === 'cache' ? 'Не удалось очистить кэш сайта.' : kind === 'login' ? 'Не удалось сбросить вход Humble.' : 'Не удалось полностью очистить данные Humble. Перезапустите приложение и повторите.', kind: 'error' });
+    } finally { maintenanceLock.current = false; setMaintenance(null); }
+  };
+  const restorePurchases = async () => {
+    if (maintenanceLock.current || dataBlocked) return;
+    maintenanceLock.current = true; setMaintenance('recovery'); setMaintenanceMessage(null);
+    try {
+      if (await onImportLegacy()) setMaintenanceMessage({text: 'Сохранённые покупки восстановлены.', kind: 'success'});
+    } catch (caught) {
+      setMaintenanceMessage({text: typeof caught === 'string' ? caught : caught instanceof Error ? caught.message : 'Не удалось восстановить сохранённые покупки.', kind: 'error'});
     } finally { maintenanceLock.current = false; setMaintenance(null); }
   };
   useEffect(() => {
@@ -108,6 +118,7 @@ export default function SettingsDialog({ update, appBusy, fullResetBlocked, onCl
     </div> : <>
     <section className="settings-section"><h3>{tr('Интерфейс')}</h3><div className="settings-row"><div><label htmlFor="interface-language">{tr('Язык')}</label><p>{tr('Язык интерфейса приложения')}</p></div><select id="interface-language" value={language} onChange={event => setLanguage(event.target.value as typeof language)}>{languages.map(item => <option key={item.value} value={item.value}>{item.value === 'system' ? tr('Как в системе') : item.label}</option>)}</select></div></section>
     <section className="settings-section settings-data"><h3>{tr('Данные Humble')}</h3>
+      <div className="settings-data-row"><div><h4>{tr('Восстановить сохранённые покупки')}</h4><p>{tr('Выберите свою локальную копию library.dpapi. Ключи сохранятся в исходных покупках с пометкой «Локальная копия».')}</p></div><button disabled={dataBlocked} onClick={() => void restorePurchases()}>{maintenance === 'recovery' ? <LoaderCircle size={16} className="spin" /> : <Download size={16} />}{tr(maintenance === 'recovery' ? 'Восстанавливаем покупки…' : 'Выбрать копию')}</button></div>
       <div className="settings-data-row"><div><h4>{tr('Очистить кэш сайта')}</h4><p>{tr('Удалит временные файлы сайта. Вход, библиотека и ключи сохранятся.')}</p></div><button disabled={dataBlocked} onClick={() => void maintain('cache')}>{maintenance === 'cache' ? <LoaderCircle size={16} className="spin" /> : <Eraser size={16} />}{tr(maintenance === 'cache' ? 'Очищаем кэш…' : 'Очистить кэш сайта')}</button></div>
       <div className="settings-data-row"><div><h4>{tr('Сбросить вход Humble')}</h4><p>{tr('Удалит данные входа на сайте. Библиотека и сохранённые ключи останутся в приложении.')}</p></div><button ref={resetButton} disabled={dataBlocked} onClick={() => { setMaintenanceMessage(null); setConfirmReset('login'); }}><LogOut size={16} />{tr('Сбросить вход Humble')}</button></div>
       <div className="settings-data-row"><div><h4>{tr('Очистить все данные Humble')}</h4><p>{tr('Будут удалены локальная библиотека, сохранённые ключи, кэш и сессия Humble. Для новой синхронизации потребуется войти заново.')}</p></div><button ref={resetAllButton} disabled={allDataBlocked} onClick={() => { setMaintenanceMessage(null); setConfirmReset('all'); }}><Eraser size={16} />{tr('Очистить все данные Humble')}</button></div>
